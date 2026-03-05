@@ -1,36 +1,21 @@
-"""Welcome to Reflex! This file outlines the steps to create a basic app."""
-
 import reflex as rx
+from .pages.entry import entry_page
+from .pages.hub import hub_page
+from .pages.insight import insight_page
+from .pages.vault import vault_page
 
-from rxconfig import config
+app = rx.App(
+    theme=rx.theme(
+        appearance="dark", 
+        accent_color="blue", 
+        radius="large"
+    ),
+    # Link your custom CSS for the advanced animations
+    stylesheets=["/styles.css"], 
+)
 
-
-class State(rx.State):
-    """The app state."""
-
-
-def index() -> rx.Component:
-    # Welcome Page (Index)
-    return rx.container(
-        rx.color_mode.button(position="top-right"),
-        rx.vstack(
-            rx.heading("Welcome to Reflex!", size="9"),
-            rx.text(
-                "Get started by editing ",
-                rx.code(f"{config.app_name}/{config.app_name}.py"),
-                size="5",
-            ),
-            rx.link(
-                rx.button("Check out our docs!"),
-                href="https://reflex.dev/docs/getting-started/introduction/",
-                is_external=True,
-            ),
-            spacing="5",
-            justify="center",
-            min_height="85vh",
-        ),
-    )
-
-
-app = rx.App()
-app.add_page(index)
+# This sets entry_page as the home route (localhost:3000/)
+app.add_page(entry_page, route="/")
+app.add_page(hub_page, route="/hub")
+app.add_page(insight_page, route="/insight")
+app.add_page(vault_page, route="/vault")

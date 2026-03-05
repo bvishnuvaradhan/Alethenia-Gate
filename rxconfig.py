@@ -2,8 +2,8 @@ import reflex as rx
 
 config = rx.Config(
     app_name="aletheia_gate",
-    plugins=[
-        rx.plugins.SitemapPlugin(),
-        rx.plugins.TailwindV4Plugin(),
-    ]
+    stylesheets=[
+        "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css",
+        "/styles.css", # The slash refers to the assets folder
+    ],
 )
