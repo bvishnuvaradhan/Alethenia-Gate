@@ -5,3 +5,35 @@ assets/external/
 .states
 *.db
 .venv/
+venv/
+env/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Testing and coverage
+.pytest_cache/
+htmlcov/
+.coverage
+*.cover
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
