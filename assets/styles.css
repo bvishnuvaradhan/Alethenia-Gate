@@ -159,6 +159,7 @@ input:focus {
 /* Glass Morphism Cards */
 .glass-card {
     background: var(--glass-light);
+    -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     border-radius: 15px;
@@ -201,9 +202,30 @@ input:focus {
 }
 
 /* Firefox Scrollbar */
-* {
-    scrollbar-color: linear-gradient(180deg, #00d4ff, #8000ff) rgba(0, 0, 0, 0.5);
-    scrollbar-width: thin;
+@supports (scrollbar-color: auto) {
+    * {
+        scrollbar-color: rgba(0, 212, 255, 0.5) rgba(0, 0, 0, 0.5);
+        scrollbar-width: thin;
+    }
+}
+
+/* Webkit Scrollbar (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.5);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 255, 0.8);
 }
 
 /* Responsive Typography */
@@ -233,4 +255,11 @@ input:focus {
     a, button {
         cursor: pointer;
     }
+}
+
+/* Scroll Margin for Fixed Navbar - Ensures proper spacing when anchoring */
+#features,
+#benefits,
+#security {
+    scroll-margin-top: 150px;
 }

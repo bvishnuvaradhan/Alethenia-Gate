@@ -1,9 +1,10 @@
 import reflex as rx
 
-# Logo color scheme from the image
-PRIMARY_COLOR = "#0EA5E9"  # Cyan-blue from logo
-DARK_BG = "#0a0e27"
-ACCENT_COLOR = "#06B6D4"  # Turquoise accent
+# THE NEURAL THRESHOLD - Color Scheme to match logo.png
+PRIMARY_COLOR = "#00E5FF"  # Terminal Cyan (main accent)
+DARK_BG = "#0B0F1A"  # Deep space black
+ACCENT_COLOR = "#C44CFF"  # Purple accent for gradients
+VERIFIED_GREEN = "#00FF9C"  # Success/verified state
 
 def feature_card(icon: str, title: str, desc: str):
     """Reusable card for project details with enhanced styling."""
@@ -12,23 +13,23 @@ def feature_card(icon: str, title: str, desc: str):
         rx.box(
             rx.icon(tag=icon, size=40, color=PRIMARY_COLOR),
             padding="1em",
-            background=f"rgba(14, 165, 233, 0.1)",
+            background=f"rgba(0, 229, 255, 0.1)",
             border_radius="12px",
-            box_shadow=f"0 0 20px rgba(14, 165, 233, 0.2)",
+            box_shadow=f"0 0 20px rgba(0, 229, 255,0.2)",
         ),
-        rx.heading(title, size="4", color="#ffffff", weight="bold"),
-        rx.text(desc, size="2", color="#b0b0b0", line_height="1.6"),
+        rx.heading(title, size="5", color="#ffffff", weight="bold", font_family="Orbitron, sans-serif"),
+        rx.text(desc, size="2", color="#b0b0b0", line_height="1.6", font_family="Exo 2, sans-serif"),
         align="start",
         padding="2.5em",
         background="rgba(255, 255, 255, 0.05)",
-        border=f"1px solid rgba(14, 165, 233, 0.15)",
+        border=f"1px solid rgba(0, 229, 255, 0.15)",
         border_radius="20px",
         transition="all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         _hover={
             "transform": "translateY(-15px)",
-            "border": f"1px solid rgba(14, 165, 233, 0.4)",
+            "border": f"1px solid rgba(0, 229, 255, 0.4)",
             "background": "rgba(255, 255, 255, 0.08)",
-            "box_shadow": f"0 20px 40px rgba(14, 165, 233, 0.15)",
+            "box_shadow": f"0 20px 40px rgba(0, 229, 255, 0.15)",
         },
         spacing="3",
     )
@@ -37,17 +38,17 @@ def benefit_item(number: str, title: str, desc: str):
     """Reusable benefit item for landing page."""
     return rx.hstack(
         rx.box(
-            rx.text(number, size="3", weight="bold", color=PRIMARY_COLOR),
+            rx.text(number, size="3", weight="bold", color=PRIMARY_COLOR, font_family="Orbitron, sans-serif"),
             padding="1.2em",
-            background=f"rgba(14, 165, 233, 0.15)",
+            background=f"rgba(0, 229, 255, 0.15)",
             border_radius="50%",
             width="60px",
             text_align="center",
-            box_shadow=f"0 0 20px rgba(14, 165, 233, 0.2)",
+            box_shadow=f"0 0 20px rgba(0, 229, 255, 0.2)",
         ),
         rx.vstack(
-            rx.heading(title, size="3", color="white", weight="bold"),
-            rx.text(desc, size="2", color="#b0b0b0"),
+            rx.heading(title, size="3", color="white", weight="bold", font_family="Orbitron, sans-serif"),
+            rx.text(desc, size="2", color="#b0b0b0", font_family="Exo 2, sans-serif"),
             align="start",
             spacing="1",
         ),
@@ -67,13 +68,14 @@ def stat_card(number: str, label: str):
             size="6",
             color=PRIMARY_COLOR,
             weight="bold",
-            style={"text-shadow": f"0 0 20px rgba(14, 165, 233, 0.4)"}
+            font_family="Orbitron, sans-serif",
+            style={"text-shadow": f"0 0 20px rgba(0, 229, 255, 0.4)"}
         ),
-        rx.text(label, size="2", color="#888", weight="bold", letter_spacing="2px"),
+        rx.text(label, size="2", color="#888", weight="bold", letter_spacing="2px", font_family="Exo 2, sans-serif"),
         align="center",
         padding="2em",
-        background=f"rgba(14, 165, 233, 0.05)",
-        border=f"1px solid rgba(14, 165, 233, 0.15)",
+        background=f"rgba(0, 229, 255, 0.05)",
+        border=f"1px solid rgba(0, 229, 255, 0.15)",
         border_radius="15px",
         spacing="2",
     )
@@ -85,7 +87,8 @@ def entry_page() -> rx.Component:
             position="fixed",
             width="100vw",
             height="100vh",
-            background="linear-gradient(135deg, #0a0e27 0%, #16213e 50%, #0f3460 100%)",
+            background=DARK_BG,
+            class_name="neural-grid deep-space",
             z_index="-2",
         ),
         
@@ -96,7 +99,7 @@ def entry_page() -> rx.Component:
             left="10%",
             width="400px",
             height="400px",
-            background=f"radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%)",
+            background=f"radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, transparent 70%)",
             border_radius="50%",
             filter="blur(120px)",
             z_index="-1",
@@ -109,7 +112,7 @@ def entry_page() -> rx.Component:
             right="10%",
             width="500px",
             height="500px",
-            background=f"radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%)",
+            background=f"radial-gradient(circle, rgba(196, 76, 255, 0.1) 0%, transparent 70%)",
             border_radius="50%",
             filter="blur(140px)",
             z_index="-1",
@@ -125,7 +128,7 @@ def entry_page() -> rx.Component:
                         width="50px",
                         height="auto",
                     ),
-                    rx.heading("ALETHEIA", size="5", color=PRIMARY_COLOR, weight="bold", style={"letter-spacing": "3px"}),
+                    rx.heading("ALETHEIA", size="5", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif", style={"letter-spacing": "3px"}),
                     spacing="2",
                     align="center",
                 ),
@@ -134,13 +137,17 @@ def entry_page() -> rx.Component:
                     rx.link("Features", href="#features", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
                     rx.link("Benefits", href="#benefits", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
                     rx.link("Security", href="#security", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
-                    rx.button("Get Access", size="2", background=f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})", color="white", padding_x="2em"),
+                    rx.link("Login", href="/login", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
+                    rx.button("Get Access", size="2", background=f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})", color="white", padding_x="2em", on_click=rx.redirect("/signup")),
                     spacing="4",
                 ),
                 padding="2em 4em",
                 background="rgba(0, 0, 0, 0.5)",
-                backdrop_filter="blur(10px)",
-                border_bottom=f"1px solid rgba(14, 165, 233, 0.2)",
+                style={
+                    "-webkit-backdrop-filter": "blur(10px)",
+                    "backdrop-filter": "blur(10px)",
+                },
+                border_bottom=f"1px solid rgba(0, 229, 255, 0.2)",
                 width="100%",
                 align="center",
             ),
@@ -162,9 +169,9 @@ def entry_page() -> rx.Component:
                             src="/logo.png",
                             width="280px",
                             height="auto",
-                            class_name="animate__animated animate__fadeInDown",
                         ),
-                        filter=f"drop-shadow(0 0 40px rgba(14, 165, 233, 0.6))",
+                        filter=f"drop-shadow(0 0 40px rgba(0, 229, 255, 0.6))",
+                        class_name="breathing",
                     ),
                     
                     # Main heading
@@ -173,9 +180,11 @@ def entry_page() -> rx.Component:
                         size="9",
                         weight="bold",
                         color="white",
+                        font_family="Orbitron, sans-serif",
+                        class_name="glitch-text",
                         style={
                             "letter-spacing": "12px",
-                            "text-shadow": f"0 0 30px rgba(14, 165, 233, 0.6), 0 0 60px rgba(6, 182, 212, 0.3)",
+                            "text-shadow": f"0 0 30px rgba(0, 229, 255, 0.6), 0 0 60px rgba(196, 76, 255, 0.3)",
                             "font-weight": "900",
                             "background": f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})",
                             "-webkit-background-clip": "text",
@@ -190,10 +199,11 @@ def entry_page() -> rx.Component:
                             "UNLOCK TRUTH THROUGH ADVANCED INFORMATION SYSTEMS",
                             color=PRIMARY_COLOR,
                             size="2",
+                            font_family="Orbitron, sans-serif",
                             style={
                                 "letter-spacing": "5px",
                                 "font-weight": "600",
-                                "text-shadow": f"0 0 15px rgba(14, 165, 233, 0.4)",
+                                "text-shadow": f"0 0 15px rgba(0, 229, 255, 0.4)",
                             }
                         ),
                         rx.box(
@@ -210,6 +220,7 @@ def entry_page() -> rx.Component:
                         "Enterprise-grade decentralized infrastructure for secure data management and truth verification in the digital age.",
                         size="3",
                         color="#b0b0b0",
+                        font_family="Exo 2, sans-serif",
                         text_align="center",
                         max_width="700px",
                         line_height="1.8",
@@ -227,9 +238,10 @@ def entry_page() -> rx.Component:
                             border_radius="10px",
                             letter_spacing="2px",
                             transition="all 0.4s ease",
+                            class_name="glow-shadow-hover",
                             _hover={
                                 "transform": "translateY(-5px)",
-                                "box_shadow": f"0 20px 50px rgba(14, 165, 233, 0.3)",
+                                "box_shadow": f"0 20px 50px rgba(0, 229, 255, 0.3)",
                             },
                             on_click=rx.redirect("/hub")
                         ),
@@ -246,8 +258,8 @@ def entry_page() -> rx.Component:
                             transition="all 0.4s ease",
                             _hover={
                                 "transform": "translateY(-5px)",
-                                "background": "rgba(14, 165, 233, 0.1)",
-                                "box_shadow": f"0 20px 50px rgba(14, 165, 233, 0.2)",
+                                "background": "rgba(0, 229, 255, 0.1)",
+                                "box_shadow": f"0 20px 50px rgba(0, 229, 255, 0.2)",
                             },
                         ),
                         spacing="4",
@@ -285,15 +297,17 @@ def entry_page() -> rx.Component:
                         rx.heading(
                             "CORE FEATURES",
                             id="features",
-                            size="7",
+                            size="8",
                             color="white",
                             weight="bold",
+                            font_family="Orbitron, sans-serif",
                             style={"letter-spacing": "3px"}
                         ),
                         rx.text(
                             "Powered by cutting-edge technology and security protocols",
                             size="2",
                             color="#888",
+                            font_family="Exo 2, sans-serif",
                         ),
                         align="center",
                         spacing="2",
@@ -325,15 +339,17 @@ def entry_page() -> rx.Component:
                         rx.heading(
                             "WHY CHOOSE ALETHEIA",
                             id="benefits",
-                            size="7",
+                            size="8",
                             color="white",
                             weight="bold",
+                            font_family="Orbitron, sans-serif",
                             style={"letter-spacing": "3px"}
                         ),
                         rx.text(
                             "Experience the future of secure information management",
                             size="2",
                             color="#888",
+                            font_family="Exo 2, sans-serif",
                         ),
                         align="center",
                         spacing="2",
@@ -364,15 +380,17 @@ def entry_page() -> rx.Component:
                         rx.heading(
                             "SECURITY & COMPLIANCE",
                             id="security",
-                            size="7",
+                            size="8",
                             color="white",
                             weight="bold",
+                            font_family="Orbitron, sans-serif",
                             style={"letter-spacing": "3px"}
                         ),
                         rx.text(
                             "Built with security as the foundation, not an afterthought",
                             size="2",
                             color="#888",
+                            font_family="Exo 2, sans-serif",
                         ),
                         align="center",
                         spacing="2",
@@ -382,22 +400,22 @@ def entry_page() -> rx.Component:
                     rx.grid(
                         rx.vstack(
                             rx.icon(tag="shield-check", size=50, color=PRIMARY_COLOR),
-                            rx.heading("Quantum-Safe", size="4", color="white", weight="bold"),
-                            rx.text("Post-quantum cryptography ready for tomorrow's threats", size="2", color="#888", text_align="center"),
+                            rx.heading("Quantum-Safe", size="4", color="white", weight="bold", font_family="Orbitron, sans-serif"),
+                            rx.text("Post-quantum cryptography ready for tomorrow's threats", size="2", color="#888", text_align="center", font_family="Exo 2, sans-serif"),
                             align="center",
                             padding="2em",
                         ),
                         rx.vstack(
                             rx.icon(tag="lock", size=50, color=PRIMARY_COLOR),
-                            rx.heading("Zero-Knowledge Proof", size="4", color="white", weight="bold"),
-                            rx.text("Verify without revealing sensitive information", size="2", color="#888", text_align="center"),
+                            rx.heading("Zero-Knowledge Proof", size="4", color="white", weight="bold", font_family="Orbitron, sans-serif"),
+                            rx.text("Verify without revealing sensitive information", size="2", color="#888", text_align="center", font_family="Exo 2, sans-serif"),
                             align="center",
                             padding="2em",
                         ),
                         rx.vstack(
                             rx.icon(tag="audit", size=50, color=PRIMARY_COLOR),
-                            rx.heading("Full Audit Trails", size="4", color="white", weight="bold"),
-                            rx.text("Complete immutable logs of all operations and access", size="2", color="#888", text_align="center"),
+                            rx.heading("Full Audit Trails", size="4", color="white", weight="bold", font_family="Orbitron, sans-serif"),
+                            rx.text("Complete immutable logs of all operations and access", size="2", color="#888", text_align="center", font_family="Exo 2, sans-serif"),
                             align="center",
                             padding="2em",
                         ),
@@ -420,12 +438,14 @@ def entry_page() -> rx.Component:
                         size="8",
                         color="white",
                         weight="bold",
+                        font_family="Orbitron, sans-serif",
                         text_align="center",
                     ),
                     rx.text(
                         "Join enterprises worldwide securing their most critical information with Aletheia Gate.",
                         size="3",
                         color="#b0b0b0",
+                        font_family="Exo 2, sans-serif",
                         text_align="center",
                         max_width="600px",
                     ),
@@ -439,9 +459,10 @@ def entry_page() -> rx.Component:
                             color="white",
                             border_radius="10px",
                             letter_spacing="2px",
+                            on_click=rx.redirect("/signup"),
                             _hover={
                                 "transform": "translateY(-3px)",
-                                "box_shadow": f"0 20px 50px rgba(14, 165, 233, 0.3)",
+                                "box_shadow": f"0 20px 50px rgba(0, 229, 255, 0.3)",
                             },
                         ),
                         spacing="4",
@@ -451,22 +472,22 @@ def entry_page() -> rx.Component:
                     width="100%",
                     align="center",
                     spacing="4",
-                    background=f"rgba(14, 165, 233, 0.05)",
-                    border_top=f"1px solid rgba(14, 165, 233, 0.1)",
-                    border_bottom=f"1px solid rgba(14, 165, 233, 0.1)",
+                    background=f"rgba(0, 229, 255, 0.05)",
+                    border_top=f"1px solid rgba(0, 229, 255, 0.1)",
+                    border_bottom=f"1px solid rgba(0, 229, 255, 0.1)",
                 ),
                 
                 # FOOTER
                 rx.vstack(
                     rx.hstack(
                         rx.vstack(
-                            rx.heading("ALETHEIA", size="4", color=PRIMARY_COLOR, weight="bold"),
-                            rx.text("Unlocking truth through advanced systems", size="2", color="#888"),
+                            rx.heading("ALETHEIA", size="4", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
+                            rx.text("Unlocking truth through advanced systems", size="2", color="#888", font_family="Exo 2, sans-serif"),
                             align="start",
                         ),
                         rx.spacer(),
                         rx.vstack(
-                            rx.text("PRODUCT", size="2", color=PRIMARY_COLOR, weight="bold"),
+                            rx.text("PRODUCT", size="2", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
                             rx.link("Features", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
                             rx.link("Pricing", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
                             rx.link("Security", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
@@ -474,7 +495,7 @@ def entry_page() -> rx.Component:
                             spacing="3",
                         ),
                         rx.vstack(
-                            rx.text("COMPANY", size="2", color=PRIMARY_COLOR, weight="bold"),
+                            rx.text("COMPANY", size="2", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
                             rx.link("About", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
                             rx.link("Blog", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
                             rx.link("Careers", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
@@ -482,7 +503,7 @@ def entry_page() -> rx.Component:
                             spacing="3",
                         ),
                         rx.vstack(
-                            rx.text("LEGAL", size="2", color=PRIMARY_COLOR, weight="bold"),
+                            rx.text("LEGAL", size="2", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
                             rx.link("Privacy", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
                             rx.link("Terms", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
                             rx.link("Contact", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
@@ -492,7 +513,7 @@ def entry_page() -> rx.Component:
                         width="100%",
                         spacing="8",
                         padding_bottom="2em",
-                        border_bottom=f"1px solid rgba(14, 165, 233, 0.1)",
+                        border_bottom=f"1px solid rgba(0, 229, 255, 0.1)",
                     ),
                     rx.hstack(
                         rx.text("© 2026 ALETHEIA GATE. All rights reserved.", size="1", color="#555"),
@@ -510,9 +531,10 @@ def entry_page() -> rx.Component:
                 
                 width="100%",
                 align="center",
-                padding_top="80px",
+                padding_top="120px",
             ),
             width="100%",
+            padding_top="20px",
         ),
         
         width="100%",
