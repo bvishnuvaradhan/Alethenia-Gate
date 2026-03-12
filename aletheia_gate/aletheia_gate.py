@@ -13,7 +13,7 @@ app = rx.App(
         radius="large"
     ),
     # Link your custom CSS for the advanced animations
-    stylesheets=["/styles.css"], 
+    stylesheets=["/styles.css", "/hub_styles.css"], 
 )
 
 # This sets entry_page as the home route (localhost:3000/)

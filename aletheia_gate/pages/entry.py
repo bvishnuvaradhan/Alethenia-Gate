@@ -1,543 +1,514 @@
 import reflex as rx
 
-# THE NEURAL THRESHOLD - Color Scheme to match logo.png
-PRIMARY_COLOR = "#00E5FF"  # Terminal Cyan (main accent)
-DARK_BG = "#0B0F1A"  # Deep space black
-ACCENT_COLOR = "#C44CFF"  # Purple accent for gradients
-VERIFIED_GREEN = "#00FF9C"  # Success/verified state
 
-def feature_card(icon: str, title: str, desc: str):
-    """Reusable card for project details with enhanced styling."""
-    return rx.vstack(
-        # Icon with glow effect
-        rx.box(
-            rx.icon(tag=icon, size=40, color=PRIMARY_COLOR),
-            padding="1em",
-            background=f"rgba(0, 229, 255, 0.1)",
-            border_radius="12px",
-            box_shadow=f"0 0 20px rgba(0, 229, 255,0.2)",
+def _top_nav() -> rx.Component:
+    nav_items = [
+        ("FEATURES", "#capabilities"),
+        ("HOW IT WORKS", "#how-aletheia-works"),
+        ("ABOUT", "#built-for-power-users"),
+    ]
+    return rx.box(
+        rx.hstack(
+            rx.hstack(
+                rx.image(
+                    src="/logo.png",
+                    alt="Aletheia Gate",
+                    class_name="ag-nav-logo",
+                ),
+                rx.vstack(
+                    rx.text("ALETHEIA", class_name="ag-brand-main"),
+                    rx.text("GATE", class_name="ag-brand-sub"),
+                    align="start",
+                    spacing="0",
+                ),
+                align="center",
+                spacing="3",
+            ),
+            rx.hstack(
+                *[
+                    rx.link(
+                        rx.text(label, class_name="ag-nav-link"),
+                        href=href,
+                        text_decoration="none",
+                    )
+                    for label, href in nav_items
+                ],
+                class_name="ag-nav-links",
+                spacing="1",
+            ),
+            rx.hstack(
+                rx.link(
+                    rx.button(
+                        "LOGIN",
+                        class_name="ag-nav-login",
+                    ),
+                    href="/login",
+                    text_decoration="none",
+                ),
+                rx.link(
+                    rx.button(
+                        "GET ACCESS",
+                        class_name="ag-btn-primary ag-btn-small",
+                    ),
+                    href="/signup",
+                    text_decoration="none",
+                ),
+                spacing="3",
+                flex_shrink="0",
+            ),
+            justify="between",
+            align="center",
+            class_name="ag-nav-inner",
+            width="100%",
         ),
-        rx.heading(title, size="5", color="#ffffff", weight="bold", font_family="Orbitron, sans-serif"),
-        rx.text(desc, size="2", color="#b0b0b0", line_height="1.6", font_family="Exo 2, sans-serif"),
-        align="start",
-        padding="2.5em",
-        background="rgba(255, 255, 255, 0.05)",
-        border=f"1px solid rgba(0, 229, 255, 0.15)",
-        border_radius="20px",
-        transition="all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-        _hover={
-            "transform": "translateY(-15px)",
-            "border": f"1px solid rgba(0, 229, 255, 0.4)",
-            "background": "rgba(255, 255, 255, 0.08)",
-            "box_shadow": f"0 20px 40px rgba(0, 229, 255, 0.15)",
-        },
-        spacing="3",
+        class_name="ag-nav",
+        width="100%",
     )
 
-def benefit_item(number: str, title: str, desc: str):
-    """Reusable benefit item for landing page."""
+
+def _hero_stats() -> rx.Component:
+    items = [
+        ("247,893", "TRUTH AUDITS RUN"),
+        ("94.7%", "AVG ACCURACY GAIN"),
+        ("4", "AI MODELS MONITORED"),
+    ]
     return rx.hstack(
-        rx.box(
-            rx.text(number, size="3", weight="bold", color=PRIMARY_COLOR, font_family="Orbitron, sans-serif"),
-            padding="1.2em",
-            background=f"rgba(0, 229, 255, 0.15)",
-            border_radius="50%",
-            width="60px",
-            text_align="center",
-            box_shadow=f"0 0 20px rgba(0, 229, 255, 0.2)",
-        ),
-        rx.vstack(
-            rx.heading(title, size="3", color="white", weight="bold", font_family="Orbitron, sans-serif"),
-            rx.text(desc, size="2", color="#b0b0b0", font_family="Exo 2, sans-serif"),
-            align="start",
-            spacing="1",
-        ),
-        align="start",
-        spacing="4",
-        padding="2em",
-        background="rgba(255, 255, 255, 0.03)",
-        border_left=f"3px solid {PRIMARY_COLOR}",
-        border_radius="10px",
+        *[
+            rx.vstack(
+                rx.text(val, class_name="ag-stat-value"),
+                rx.text(label, class_name="ag-stat-label"),
+                align="start",
+                spacing="1",
+                class_name="ag-stat-item",
+            )
+            for val, label in items
+        ],
+        class_name="ag-hero-stats",
+        spacing="6",
+        wrap="wrap",
     )
 
-def stat_card(number: str, label: str):
-    """Reusable stat card for metrics."""
-    return rx.vstack(
-        rx.heading(
-            number,
-            size="6",
-            color=PRIMARY_COLOR,
-            weight="bold",
-            font_family="Orbitron, sans-serif",
-            style={"text-shadow": f"0 0 20px rgba(0, 229, 255, 0.4)"}
+
+def _hero() -> rx.Component:
+    return rx.section(
+        rx.box(class_name="ag-glow ag-glow-left"),
+        rx.box(class_name="ag-glow ag-glow-right"),
+        rx.hstack(
+            rx.vstack(
+                rx.hstack(
+                    rx.box(class_name="ag-status-dot ag-status-green"),
+                    rx.text("QUANTUM TRUTH INTERFACE // ONLINE", class_name="ag-status-text"),
+                    align="center",
+                    spacing="2",
+                ),
+                rx.hstack(
+                    rx.box(class_name="ag-eyebrow-line"),
+                    rx.text("FORENSIC-GRADE AI AUDITING", class_name="ag-eyebrow"),
+                    align="center",
+                    spacing="3",
+                ),
+                rx.vstack(
+                    rx.text("ALETHEIA", class_name="ag-title-main ag-flicker"),
+                    rx.text("GATE", class_name="ag-title-sub"),
+                    align="start",
+                    spacing="0",
+                ),
+                rx.vstack(
+                    rx.text("VERITAS SINE FINE", class_name="ag-tagline-main"),
+                    rx.text("TRUTH WITHOUT END", class_name="ag-tagline-sub"),
+                    align="start",
+                    spacing="1",
+                ),
+                rx.text(
+                    "The first forensic-grade Quantum Truth Interface. Built for researchers, developers, and power users who demand verifiable certainty - not just answers - from every AI endpoint they touch.",
+                    class_name="ag-hero-copy",
+                ),
+                rx.hstack(
+                    rx.link(
+                        rx.button(
+                            "INITIATE QUANTUM HANDSHAKE",
+                            class_name="ag-btn-primary",
+                        ),
+                        href="/signup",
+                        text_decoration="none",
+                    ),
+                    rx.link(
+                        rx.button(
+                            "RETURNING OPERATOR ->",
+                            class_name="ag-btn-link",
+                        ),
+                        href="/login",
+                        text_decoration="none",
+                    ),
+                    spacing="4",
+                    wrap="wrap",
+                ),
+                _hero_stats(),
+                align="start",
+                spacing="6",
+                class_name="ag-hero-left",
+            ),
+            rx.box(
+                rx.box(
+                    rx.box(class_name="ag-radar-ring ag-radar-ring-1"),
+                    rx.box(class_name="ag-radar-ring ag-radar-ring-2"),
+                    rx.box(class_name="ag-radar-ring ag-radar-ring-3"),
+                    rx.box(class_name="ag-radar-ring ag-radar-ring-4"),
+                    rx.box(class_name="ag-radar-grid"),
+                    rx.box(class_name="ag-radar-arc ag-radar-arc-a"),
+                    rx.box(class_name="ag-radar-arc ag-radar-arc-b"),
+                    rx.box(class_name="ag-radar-arc ag-radar-arc-c"),
+                    rx.box(class_name="ag-radar-arc ag-radar-arc-d"),
+                    rx.box(class_name="ag-radar-sweep-cone"),
+                    rx.box(class_name="ag-radar-sweep"),
+                    rx.box(class_name="ag-radar-center"),
+                    rx.box(class_name="ag-radar-blip ag-radar-blip-1"),
+                    rx.box(class_name="ag-radar-blip ag-radar-blip-2"),
+                    rx.box(class_name="ag-radar-blip ag-radar-blip-3"),
+                    rx.box(class_name="ag-radar-blip ag-radar-blip-4"),
+                    rx.text("GPT-4o :: 87%", class_name="ag-radar-label ag-radar-label-1"),
+                    rx.text("GROQ :: 91%", class_name="ag-radar-label ag-radar-label-2"),
+                    rx.text("LLAMA :: 72%", class_name="ag-radar-label ag-radar-label-3"),
+                    rx.text("CLAUDE :: 94%", class_name="ag-radar-label ag-radar-label-4"),
+                    rx.text("TRUTH CORE", class_name="ag-radar-core"),
+                    class_name="ag-radar",
+                ),
+                class_name="ag-hero-right",
+            ),
+            class_name="ag-hero-wrap",
+            align="center",
+            justify="between",
+            spacing="8",
         ),
-        rx.text(label, size="2", color="#888", weight="bold", letter_spacing="2px", font_family="Exo 2, sans-serif"),
+        class_name="ag-hero",
+    )
+
+
+def _flow_step(step: str, title: str, desc: str, icon: str, color: str) -> rx.Component:
+    return rx.vstack(
+        rx.box(icon, class_name="ag-flow-icon", style={"color": color, "borderColor": f"{color}66"}),
+        rx.text(f"STEP {step}", class_name="ag-flow-step", style={"color": color}),
+        rx.text(title, class_name="ag-flow-title"),
+        rx.text(desc, class_name="ag-flow-desc"),
+        class_name="ag-flow-item",
         align="center",
-        padding="2em",
-        background=f"rgba(0, 229, 255, 0.05)",
-        border=f"1px solid rgba(0, 229, 255, 0.15)",
-        border_radius="15px",
         spacing="2",
     )
 
-def entry_page() -> rx.Component:
+
+def _how_it_works() -> rx.Component:
+    steps = [
+        (
+            "01",
+            "QUERY INTAKE",
+            "Your question is parsed, tokenized and routed to all connected model endpoints simultaneously.",
+            "△",
+            "#00f5ff",
+        ),
+        (
+            "02",
+            "CROSS-REFERENCE",
+            "Each model response is compared against the others and against our internal vector truth database.",
+            "⊘",
+            "#bf5fff",
+        ),
+        (
+            "03",
+            "SCORE & FLAG",
+            "A composite integrity index score is computed. Divergent claims are flagged as potential hallucinations.",
+            "◎",
+            "#39ff14",
+        ),
+        (
+            "04",
+            "ARCHIVE & REPORT",
+            "The full audit - query, responses, scores, timestamps - is sealed into the Vault as an immutable record.",
+            "⬢",
+            "#ffaa00",
+        ),
+    ]
+    return rx.section(
+        rx.vstack(
+            rx.text("ARCHITECTURAL FLOW", class_name="ag-section-kicker ag-purple"),
+            rx.heading("HOW ALETHEIA WORKS", class_name="ag-section-title"),
+            align="center",
+            spacing="2",
+            margin_bottom="2.8rem",
+        ),
+        rx.hstack(
+            *[_flow_step(*s) for s in steps],
+            class_name="ag-flow-grid",
+            align="stretch",
+            spacing="0",
+            wrap="wrap",
+        ),
+        class_name="ag-section",
+        id="how-aletheia-works",
+    )
+
+
+def _feature_card(title: str, desc: str, icon: str, color: str) -> rx.Component:
     return rx.box(
-        # ANIMATED BACKGROUND ELEMENTS
-        rx.box(
-            position="fixed",
-            width="100vw",
-            height="100vh",
-            background=DARK_BG,
-            class_name="neural-grid deep-space",
-            z_index="-2",
+        rx.box(class_name="ag-cap-corner ag-cap-corner-tl"),
+        rx.box(class_name="ag-cap-corner ag-cap-corner-tr"),
+        rx.box(class_name="ag-cap-corner ag-cap-corner-bl"),
+        rx.box(class_name="ag-cap-corner ag-cap-corner-br"),
+        rx.box(icon, class_name="ag-cap-icon", style={"color": color, "borderColor": f"{color}44", "background": f"{color}12"}),
+        rx.text(title, class_name="ag-cap-title", style={"color": color}),
+        rx.text(desc, class_name="ag-cap-desc"),
+        rx.text("EXPLORE ->", class_name="ag-cap-explore", style={"color": color}),
+        class_name="ag-cap-card",
+        style={"--ag-cap-accent": color},
+    )
+
+
+def _capabilities() -> rx.Component:
+    cards = [
+        (
+            "HALLUCINATION RADAR",
+            "Real-time probabilistic scanning of AI outputs using multi-model cross-referencing with 12-layer neural verification protocols.",
+            "◎",
+            "#bf5fff",
         ),
-        
-        # FLOATING ORB ANIMATIONS with logo colors
-        rx.box(
-            position="fixed",
-            top="10%",
-            left="10%",
-            width="400px",
-            height="400px",
-            background=f"radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, transparent 70%)",
-            border_radius="50%",
-            filter="blur(120px)",
-            z_index="-1",
-            class_name="animate-pulse",
+        (
+            "INTEGRITY INDEX",
+            "Forensic-grade scoring engine assigning confidence ratings to every sentence generated by connected LLM endpoints.",
+            "⬡",
+            "#00f5ff",
         ),
-        
-        rx.box(
-            position="fixed",
-            bottom="5%",
-            right="10%",
-            width="500px",
-            height="500px",
-            background=f"radial-gradient(circle, rgba(196, 76, 255, 0.1) 0%, transparent 70%)",
-            border_radius="50%",
-            filter="blur(140px)",
-            z_index="-1",
-            class_name="animate-pulse",
+        (
+            "TRUTH ARCHIVE",
+            "Immutable audit trail with cryptographic timestamps - every truth-check preserved in the Vault for legal accountability.",
+            "⬢",
+            "#39ff14",
         ),
-        
-        # NAVIGATION BAR with LOGO - FIXED AT TOP
-        rx.box(
-            rx.hstack(
+        (
+            "MULTI-MODEL SYNC",
+            "Simultaneous interrogation of GPT-4o, Llama, Groq, and Claude endpoints. Compare, contrast, and validate in parallel.",
+            "⎊",
+            "#ffaa00",
+        ),
+        (
+            "FORENSIC CHAT",
+            "Terminal-style interrogation interface that watches the AI's reasoning in real-time - word by word, claim by claim.",
+            "⟁",
+            "#00f5ff",
+        ),
+    ]
+    return rx.section(
+        rx.vstack(
+            rx.text("AUDIT CAPABILITIES", class_name="ag-section-kicker ag-cyan"),
+            rx.heading("CAPABILITIES", class_name="ag-section-title"),
+            align="center",
+            spacing="2",
+            margin_bottom="2.8rem",
+        ),
+        rx.vstack(
+            *[_feature_card(*c) for c in cards],
+            class_name="ag-cap-grid",
+            spacing="0",
+        ),
+        class_name="ag-section",
+        id="capabilities",
+    )
+
+
+def _pillar_card(title: str, items: list[str]) -> rx.Component:
+    return rx.box(
+        rx.box(class_name="ag-pillar-corner ag-pillar-corner-tl"),
+        rx.box(class_name="ag-pillar-corner ag-pillar-corner-tr"),
+        rx.box(class_name="ag-pillar-corner ag-pillar-corner-bl"),
+        rx.box(class_name="ag-pillar-corner ag-pillar-corner-br"),
+        rx.text(title, class_name="ag-pillar-title", style={"color": "#00cfff"}),
+        rx.vstack(
+            *[
                 rx.hstack(
-                    rx.image(
-                        src="/logo.png",
-                        width="50px",
-                        height="auto",
-                    ),
-                    rx.heading("ALETHEIA", size="5", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif", style={"letter-spacing": "3px"}),
+                    rx.box(class_name="ag-pillar-dot", style={"background": "#00cfff"}),
+                    rx.text(item, class_name="ag-pillar-item"),
                     spacing="2",
                     align="center",
+                )
+                for item in items
+            ],
+            spacing="2",
+            align="start",
+        ),
+        class_name="ag-pillar-card",
+    )
+
+
+def _pillars() -> rx.Component:
+    return rx.section(
+        rx.vstack(
+            rx.text("DESIGNED FOR POWER USERS", class_name="ag-section-kicker ag-pink"),
+            rx.heading("BUILT FOR POWER USERS", class_name="ag-section-title"),
+            align="center",
+            spacing="2",
+            margin_bottom="2.8rem",
+        ),
+        rx.vstack(
+            *[
+                _pillar_card(
+                    "FOR RESEARCHERS",
+                    [
+                        "Forensic audit trails",
+                        "Multi-model comparison",
+                        "Integrity scoring",
+                        "Vault export",
+                    ],
                 ),
-                rx.spacer(),
-                rx.hstack(
-                    rx.link("Features", href="#features", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
-                    rx.link("Benefits", href="#benefits", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
-                    rx.link("Security", href="#security", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
-                    rx.link("Login", href="/login", color="#888", _hover={"color": PRIMARY_COLOR}, size="2", weight="bold"),
-                    rx.button("Get Access", size="2", background=f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})", color="white", padding_x="2em", on_click=rx.redirect("/signup")),
-                    spacing="4",
+                _pillar_card(
+                    "FOR DEVELOPERS",
+                    [
+                        "API-first architecture",
+                        "Realtime streaming",
+                        "Batch audit mode",
+                        "Webhook events",
+                    ],
                 ),
-                padding="2em 4em",
-                background="rgba(0, 0, 0, 0.5)",
-                style={
-                    "-webkit-backdrop-filter": "blur(10px)",
-                    "backdrop-filter": "blur(10px)",
-                },
-                border_bottom=f"1px solid rgba(0, 229, 255, 0.2)",
-                width="100%",
+                _pillar_card(
+                    "FOR COMPLIANCE",
+                    [
+                        "Immutable records",
+                        "Legal timestamps",
+                        "Full transparency",
+                        "GDPR-ready export",
+                    ],
+                ),
+            ],
+            class_name="ag-pillar-grid",
+            spacing="2",
+        ),
+        class_name="ag-section",
+        id="built-for-power-users",
+    )
+
+
+def _pillars() -> rx.Component:
+    return rx.section(
+        rx.vstack(
+            rx.text("DESIGNED FOR POWER USERS", class_name="ag-section-kicker ag-pink"),
+            rx.heading("BUILT FOR POWER USERS", class_name="ag-section-title"),
+            align="center",
+            spacing="2",
+            margin_bottom="2.8rem",
+        ),
+        rx.vstack(
+            *[
+                _pillar_card(
+                    "FOR RESEARCHERS",
+                    [
+                        "Forensic audit trails",
+                        "Multi-model comparison",
+                        "Integrity scoring",
+                        "Vault export",
+                    ],
+                ),
+                _pillar_card(
+                    "FOR DEVELOPERS",
+                    [
+                        "API-first architecture",
+                        "Realtime streaming",
+                        "Batch audit mode",
+                        "Webhook events",
+                    ],
+                ),
+                _pillar_card(
+                    "FOR COMPLIANCE",
+                    [
+                        "Immutable records",
+                        "Legal timestamps",
+                        "Full transparency",
+                        "GDPR-ready export",
+                    ],
+                ),
+            ],
+            class_name="ag-pillar-grid",
+            spacing="2",
+        ),
+        class_name="ag-section",
+        id="built-for-power-users",
+    )
+
+
+def _cta() -> rx.Component:
+    return rx.section(
+        rx.box(class_name="ag-cta-ambient"),
+        rx.text("- BEGIN YOUR AUDIT -", class_name="ag-section-kicker ag-pink"),
+        rx.vstack(
+            rx.text("READY TO INTERROGATE", class_name="ag-cta-title-main"),
+            rx.text("YOUR AI?", class_name="ag-cta-title-emphasis"),
+            class_name="ag-cta-title-wrap",
+            spacing="1",
+            align="center",
+        ),
+        rx.text(
+            "Join researchers and developers using Aletheia Gate to verify, audit, and trust the AI outputs that matter.",
+            class_name="ag-cta-copy",
+        ),
+        rx.hstack(
+            rx.link(
+                rx.button(
+                    "⬡ CREATE CLEARANCE — FREE",
+                    class_name="ag-btn-primary ag-btn-large",
+                ),
+                href="/signup",
+                text_decoration="none",
+            ),
+            rx.link(
+                rx.button(
+                    "RETURNING OPERATOR",
+                    class_name="ag-nav-login ag-cta-secondary",
+                ),
+                href="/login",
+                text_decoration="none",
+            ),
+            spacing="4",
+            wrap="wrap",
+            justify="center",
+        ),
+        class_name="ag-cta",
+    )
+
+
+def _footer() -> rx.Component:
+    links = ["PRIVACY", "TERMS", "RESEARCH", "API"]
+    return rx.box(
+        rx.hstack(
+            rx.hstack(
+                rx.image(src="/logo.png", alt="Aletheia Gate", class_name="ag-footer-logo"),
+                rx.text("ALETHEIA GATE", class_name="ag-footer-brand"),
+                rx.text("VERITAS SINE FINE", class_name="ag-footer-tag"),
+                spacing="3",
                 align="center",
             ),
-            position="fixed",
-            top="0",
-            left="0",
-            right="0",
-            z_index="1000",
-            width="100%",
-        ),
-        
-        rx.scroll_area(
-            rx.vstack(
-                # --- HERO SECTION ---
-                rx.vstack(
-                    # Enhanced logo with glow
-                    rx.box(
-                        rx.image(
-                            src="/logo.png",
-                            width="280px",
-                            height="auto",
-                        ),
-                        filter=f"drop-shadow(0 0 40px rgba(0, 229, 255, 0.6))",
-                        class_name="breathing",
-                    ),
-                    
-                    # Main heading
-                    rx.heading(
-                        "ALETHEIA GATE",
-                        size="9",
-                        weight="bold",
-                        color="white",
-                        font_family="Orbitron, sans-serif",
-                        class_name="glitch-text",
-                        style={
-                            "letter-spacing": "12px",
-                            "text-shadow": f"0 0 30px rgba(0, 229, 255, 0.6), 0 0 60px rgba(196, 76, 255, 0.3)",
-                            "font-weight": "900",
-                            "background": f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})",
-                            "-webkit-background-clip": "text",
-                            "-webkit-text-fill-color": "transparent",
-                            "background-clip": "text",
-                        }
-                    ),
-                    
-                    # Subtitle with animation
-                    rx.vstack(
-                        rx.text(
-                            "UNLOCK TRUTH THROUGH ADVANCED INFORMATION SYSTEMS",
-                            color=PRIMARY_COLOR,
-                            size="2",
-                            font_family="Orbitron, sans-serif",
-                            style={
-                                "letter-spacing": "5px",
-                                "font-weight": "600",
-                                "text-shadow": f"0 0 15px rgba(0, 229, 255, 0.4)",
-                            }
-                        ),
-                        rx.box(
-                            height="2px",
-                            width="250px",
-                            background=f"linear-gradient(90deg, transparent, {PRIMARY_COLOR}, transparent)",
-                        ),
-                        align="center",
-                        spacing="2",
-                    ),
-                    
-                    # CTA Description
-                    rx.text(
-                        "Enterprise-grade decentralized infrastructure for secure data management and truth verification in the digital age.",
-                        size="3",
-                        color="#b0b0b0",
-                        font_family="Exo 2, sans-serif",
-                        text_align="center",
-                        max_width="700px",
-                        line_height="1.8",
-                    ),
-                    
-                    # CTA BUTTONS
-                    rx.hstack(
-                        rx.button(
-                            "Launch Application",
-                            size="3",
-                            weight="bold",
-                            padding="1.5em 3em",
-                            background=f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})",
-                            color="white",
-                            border_radius="10px",
-                            letter_spacing="2px",
-                            transition="all 0.4s ease",
-                            class_name="glow-shadow-hover",
-                            _hover={
-                                "transform": "translateY(-5px)",
-                                "box_shadow": f"0 20px 50px rgba(0, 229, 255, 0.3)",
-                            },
-                            on_click=rx.redirect("/hub")
-                        ),
-                        rx.button(
-                            "Learn More",
-                            size="3",
-                            weight="bold",
-                            padding="1.5em 3em",
-                            background="transparent",
-                            color=PRIMARY_COLOR,
-                            border=f"2px solid {PRIMARY_COLOR}",
-                            border_radius="10px",
-                            letter_spacing="2px",
-                            transition="all 0.4s ease",
-                            _hover={
-                                "transform": "translateY(-5px)",
-                                "background": "rgba(0, 229, 255, 0.1)",
-                                "box_shadow": f"0 20px 50px rgba(0, 229, 255, 0.2)",
-                            },
-                        ),
-                        spacing="4",
-                        padding_top="2em",
-                    ),
-                    
-                    height="100vh",
-                    justify="center",
-                    align="center",
-                    spacing="8",
-                    padding_x="2em",
-                ),
-                
-                # --- STATS SECTION ---
-                rx.vstack(
-                    rx.grid(
-                        stat_card("99.9%", "UPTIME"),
-                        stat_card("256-bit", "ENCRYPTION"),
-                        stat_card("∞", "SCALABILITY"),
-                        stat_card("24/7", "SUPPORT"),
-                        columns="4",
-                        spacing="4",
-                        width="100%",
-                        max_width="900px",
-                    ),
-                    padding_y="8vh",
-                    padding_x="2em",
-                    width="100%",
-                    align="center",
-                ),
-                
-                # --- FEATURES SECTION ---
-                rx.vstack(
-                    rx.vstack(
-                        rx.heading(
-                            "CORE FEATURES",
-                            id="features",
-                            size="8",
-                            color="white",
-                            weight="bold",
-                            font_family="Orbitron, sans-serif",
-                            style={"letter-spacing": "3px"}
-                        ),
-                        rx.text(
-                            "Powered by cutting-edge technology and security protocols",
-                            size="2",
-                            color="#888",
-                            font_family="Exo 2, sans-serif",
-                        ),
-                        align="center",
-                        spacing="2",
-                        padding_bottom="3em",
-                    ),
-                    
-                    rx.grid(
-                        feature_card("database", "Surreal Core", "Multi-model graph database for hyper-relational truth tracking and real-time data synchronization."),
-                        feature_card("shield", "End-to-End Encryption", "Quantum-resistant encryption for every data packet across the gate with military-grade protocols."),
-                        feature_card("cpu", "Neural Logic", "AI-driven unconcealment filters to separate signal from noise with advanced ML algorithms."),
-                        feature_card("globe", "Global Node Mesh", "Decentralized network ensuring 99.9% uptime across continents with redundancy."),
-                        feature_card("lock", "Zero-Trust Security", "Never trust, always verify approach to access control and data validation."),
-                        feature_card("zap", "Lightning-Fast", "Sub-millisecond response times with edge computing distribution."),
-                        columns="3",
-                        spacing="6",
-                        width="100%",
-                        max_width="1200px",
-                    ),
-                    
-                    padding_y="10vh",
-                    padding_x="2em",
-                    width="100%",
-                    align="center",
-                ),
-                
-                # --- BENEFITS SECTION ---
-                rx.vstack(
-                    rx.vstack(
-                        rx.heading(
-                            "WHY CHOOSE ALETHEIA",
-                            id="benefits",
-                            size="8",
-                            color="white",
-                            weight="bold",
-                            font_family="Orbitron, sans-serif",
-                            style={"letter-spacing": "3px"}
-                        ),
-                        rx.text(
-                            "Experience the future of secure information management",
-                            size="2",
-                            color="#888",
-                            font_family="Exo 2, sans-serif",
-                        ),
-                        align="center",
-                        spacing="2",
-                        padding_bottom="3em",
-                    ),
-                    
-                    rx.vstack(
-                        benefit_item("1", "Enterprise-Grade Security", "Bank-level encryption and security protocols to keep your data safe from threats."),
-                        benefit_item("2", "Infinite Scalability", "Grow without limits. Our architecture scales horizontally across unlimited nodes."),
-                        benefit_item("3", "Global Distribution", "Deploy anywhere in the world with automatic replication and disaster recovery."),
-                        benefit_item("4", "Developer-Friendly API", "Comprehensive REST and GraphQL APIs with SDKs for every major language."),
-                        benefit_item("5", "24/7 Expert Support", "Round-the-clock support from our team of security and infrastructure experts."),
-                        benefit_item("6", "Compliance Ready", "GDPR, HIPAA, SOC2, and ISO 27001 compliant infrastructure."),
-                        spacing="4",
-                        width="100%",
-                        max_width="800px",
-                    ),
-                    
-                    padding_y="10vh",
-                    padding_x="2em",
-                    width="100%",
-                    align="center",
-                ),
-                
-                # --- SECURITY SECTION ---
-                rx.vstack(
-                    rx.vstack(
-                        rx.heading(
-                            "SECURITY & COMPLIANCE",
-                            id="security",
-                            size="8",
-                            color="white",
-                            weight="bold",
-                            font_family="Orbitron, sans-serif",
-                            style={"letter-spacing": "3px"}
-                        ),
-                        rx.text(
-                            "Built with security as the foundation, not an afterthought",
-                            size="2",
-                            color="#888",
-                            font_family="Exo 2, sans-serif",
-                        ),
-                        align="center",
-                        spacing="2",
-                        padding_bottom="3em",
-                    ),
-                    
-                    rx.grid(
-                        rx.vstack(
-                            rx.icon(tag="shield-check", size=50, color=PRIMARY_COLOR),
-                            rx.heading("Quantum-Safe", size="4", color="white", weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.text("Post-quantum cryptography ready for tomorrow's threats", size="2", color="#888", text_align="center", font_family="Exo 2, sans-serif"),
-                            align="center",
-                            padding="2em",
-                        ),
-                        rx.vstack(
-                            rx.icon(tag="lock", size=50, color=PRIMARY_COLOR),
-                            rx.heading("Zero-Knowledge Proof", size="4", color="white", weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.text("Verify without revealing sensitive information", size="2", color="#888", text_align="center", font_family="Exo 2, sans-serif"),
-                            align="center",
-                            padding="2em",
-                        ),
-                        rx.vstack(
-                            rx.icon(tag="audit", size=50, color=PRIMARY_COLOR),
-                            rx.heading("Full Audit Trails", size="4", color="white", weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.text("Complete immutable logs of all operations and access", size="2", color="#888", text_align="center", font_family="Exo 2, sans-serif"),
-                            align="center",
-                            padding="2em",
-                        ),
-                        columns="3",
-                        spacing="4",
-                        width="100%",
-                        max_width="1000px",
-                    ),
-                    
-                    padding_y="10vh",
-                    padding_x="2em",
-                    width="100%",
-                    align="center",
-                ),
-                
-                # --- CTA SECTION ---
-                rx.vstack(
-                    rx.heading(
-                        "Ready to Unlock the Truth?",
-                        size="8",
-                        color="white",
-                        weight="bold",
-                        font_family="Orbitron, sans-serif",
-                        text_align="center",
-                    ),
-                    rx.text(
-                        "Join enterprises worldwide securing their most critical information with Aletheia Gate.",
-                        size="3",
-                        color="#b0b0b0",
-                        font_family="Exo 2, sans-serif",
-                        text_align="center",
-                        max_width="600px",
-                    ),
-                    rx.hstack(
-                        rx.button(
-                            "Start Free Trial",
-                            size="3",
-                            weight="bold",
-                            padding="1.5em 3em",
-                            background=f"linear-gradient(135deg, {PRIMARY_COLOR}, {ACCENT_COLOR})",
-                            color="white",
-                            border_radius="10px",
-                            letter_spacing="2px",
-                            on_click=rx.redirect("/signup"),
-                            _hover={
-                                "transform": "translateY(-3px)",
-                                "box_shadow": f"0 20px 50px rgba(0, 229, 255, 0.3)",
-                            },
-                        ),
-                        spacing="4",
-                    ),
-                    padding_y="12vh",
-                    padding_x="2em",
-                    width="100%",
-                    align="center",
-                    spacing="4",
-                    background=f"rgba(0, 229, 255, 0.05)",
-                    border_top=f"1px solid rgba(0, 229, 255, 0.1)",
-                    border_bottom=f"1px solid rgba(0, 229, 255, 0.1)",
-                ),
-                
-                # FOOTER
-                rx.vstack(
-                    rx.hstack(
-                        rx.vstack(
-                            rx.heading("ALETHEIA", size="4", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.text("Unlocking truth through advanced systems", size="2", color="#888", font_family="Exo 2, sans-serif"),
-                            align="start",
-                        ),
-                        rx.spacer(),
-                        rx.vstack(
-                            rx.text("PRODUCT", size="2", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.link("Features", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            rx.link("Pricing", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            rx.link("Security", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            align="start",
-                            spacing="3",
-                        ),
-                        rx.vstack(
-                            rx.text("COMPANY", size="2", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.link("About", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            rx.link("Blog", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            rx.link("Careers", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            align="start",
-                            spacing="3",
-                        ),
-                        rx.vstack(
-                            rx.text("LEGAL", size="2", color=PRIMARY_COLOR, weight="bold", font_family="Orbitron, sans-serif"),
-                            rx.link("Privacy", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            rx.link("Terms", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            rx.link("Contact", href="#", color="#888", size="2", _hover={"color": PRIMARY_COLOR}),
-                            align="start",
-                            spacing="3",
-                        ),
-                        width="100%",
-                        spacing="8",
-                        padding_bottom="2em",
-                        border_bottom=f"1px solid rgba(0, 229, 255, 0.1)",
-                    ),
-                    rx.hstack(
-                        rx.text("© 2026 ALETHEIA GATE. All rights reserved.", size="1", color="#555"),
-                        rx.spacer(),
-                        rx.text("Protocol Status: ACTIVE | Data Integrity: VERIFIED | Network: SECURE", size="1", color="#444"),
-                        width="100%",
-                        align="center",
-                        padding_top="2em",
-                    ),
-                    padding="6em 4em",
-                    width="100%",
-                    align="center",
-                    spacing="4",
-                ),
-                
-                width="100%",
+            rx.hstack(*[rx.text(link, class_name="ag-footer-link") for link in links], spacing="5"),
+            rx.hstack(
+                rx.box(class_name="ag-status-dot ag-status-green"),
+                rx.text("ALL SYSTEMS NOMINAL", class_name="ag-footer-state"),
+                spacing="2",
                 align="center",
-                padding_top="120px",
             ),
-            width="100%",
-            padding_top="20px",
+            class_name="ag-footer-inner",
+            justify="between",
+            align="center",
         ),
-        
-        width="100%",
-        height="100%",
-        overflow_x="hidden",
+        class_name="ag-footer",
+    )
+
+
+def entry_page() -> rx.Component:
+    return rx.box(
+        rx.box(class_name="ag-grid-bg"),
+        _top_nav(),
+        rx.box(
+            _hero(),
+            _how_it_works(),
+            _capabilities(),
+            _pillars(),
+            _cta(),
+            _footer(),
+            class_name="ag-page",
+        ),
+        class_name="ag-root",
     )
