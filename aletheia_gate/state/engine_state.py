@@ -15,10 +15,6 @@ class EngineState(State):
     anthropic_key: str = ""
     openai_key:    str = ""
 
-    # Free web source keys (2 working news APIs — NewsAPI.ai removed)
-    newsapi_org_key:  str = ""   # newsapi.org — 100 req/day free
-    newsdata_io_key:  str = ""   # newsdata.io — 200 req/day free
-
     # Settings
     sensitivity: int = 75
     max_tokens:  int = 800
@@ -44,8 +40,6 @@ class EngineState(State):
             "cohere_key": self.cohere_key,
             "anthropic_key": self.anthropic_key,
             "openai_key": self.openai_key,
-            "newsapi_org_key": self.newsapi_org_key,
-            "newsdata_io_key": self.newsdata_io_key,
         }
 
     def _persist_api_keys(self):
@@ -67,12 +61,6 @@ class EngineState(State):
     def set_openai(self, v: str):
         self.openai_key = v; self._env("OPENAI_API_KEY", v); self._persist_api_keys()
 
-    def set_newsapi_org(self, v: str):
-        self.newsapi_org_key = v; self._env("NEWSAPI_ORG_KEY", v); self._persist_api_keys()
-
-    def set_newsdata_io(self, v: str):
-        self.newsdata_io_key = v; self._env("NEWSDATA_IO_KEY", v); self._persist_api_keys()
-
     async def load_saved_api_keys(self):
         if not self.authenticated or not self.username:
             return
@@ -85,8 +73,6 @@ class EngineState(State):
         self.cohere_key = keys.get("cohere_key", "")
         self.anthropic_key = keys.get("anthropic_key", "")
         self.openai_key = keys.get("openai_key", "")
-        self.newsapi_org_key = keys.get("newsapi_org_key", "")
-        self.newsdata_io_key = keys.get("newsdata_io_key", "")
         apply_keys_to_env(keys)
 
     def set_sens(self, v):
@@ -116,17 +102,12 @@ class EngineState(State):
         cohere_k = self.cohere_key.strip() or os.getenv("COHERE_API_KEY", "").strip()
         anthropic_k = self.anthropic_key.strip() or os.getenv("ANTHROPIC_API_KEY", "").strip()
         openai_k = self.openai_key.strip() or os.getenv("OPENAI_API_KEY", "").strip()
-        newsapi_k = self.newsapi_org_key.strip() or os.getenv("NEWSAPI_ORG_KEY", "").strip()
-        newsdata_k = self.newsdata_io_key.strip() or os.getenv("NEWSDATA_IO_KEY", "").strip()
-
         # Mirror env-derived keys back to state so UI reflects actual loaded values.
         self.groq_key = groq_k
         self.gemini_key = gemini_k
         self.cohere_key = cohere_k
         self.anthropic_key = anthropic_k
         self.openai_key = openai_k
-        self.newsapi_org_key = newsapi_k
-        self.newsdata_io_key = newsdata_k
 
         from aletheia_gate.backend.free_models import (
             call_groq,
@@ -169,10 +150,6 @@ class EngineState(State):
             results.append("OpenAI ✓" if oa.available else f"OpenAI ✗ ({(oa.error or 'unavailable')[:42]})")
         else:
             results.append("OpenAI — no key")
-
-        # News APIs (presence only)
-        results.append("NewsAPI.org ✓ (key set)" if newsapi_k else "NewsAPI.org — no key")
-        results.append("NewsData.io ✓ (key set)" if newsdata_k else "NewsData.io — no key")
 
         self.status_msg = " | ".join(results)
         yield

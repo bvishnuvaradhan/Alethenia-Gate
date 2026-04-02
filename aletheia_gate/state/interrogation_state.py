@@ -200,10 +200,10 @@ class IntState(State):
         self.status_msg = "🤖 Building consensus..."
         yield
 
-        # Safe wrapper: timeout after 15 seconds
+        # Allow more time for multi-source verification and first-run model warmup.
         result = await safe_execute(
             run_truth_engine(p),
-            timeout_sec=15,
+            timeout_sec=45,
             operation_name="Consensus engine"
         )
 

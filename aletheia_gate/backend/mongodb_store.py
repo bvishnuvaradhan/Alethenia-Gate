@@ -198,8 +198,6 @@ def apply_keys_to_env(keys: dict[str, Any]) -> None:
         "cohere_key": "COHERE_API_KEY",
         "anthropic_key": "ANTHROPIC_API_KEY",
         "openai_key": "OPENAI_API_KEY",
-        "newsapi_org_key": "NEWSAPI_ORG_KEY",
-        "newsdata_io_key": "NEWSDATA_IO_KEY",
     }
     for state_key, env_key in mapping.items():
         val = str(keys.get(state_key, "") or "").strip()

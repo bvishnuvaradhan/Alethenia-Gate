@@ -190,23 +190,11 @@ def engine_page() -> rx.Component:
                         ("Wikidata SPARQL", "No key needed — structured facts"),
                     ]
                 ],
-                _apirow("NEWSAPI.ORG — 100 req/day free",
-                        "your_key...", EngineState.newsapi_org_key, EngineState.set_newsapi_org,
-                        "newsapi.org/register"),
-                _apirow("NEWSDATA.IO — 200 req/day free",
-                        "pub_...", EngineState.newsdata_io_key, EngineState.set_newsdata_io,
-                        "newsdata.io"),
                 # System status
                 hud("SYSTEM STATUS", margin_top="8px"),
                 _sysrow("WIKIPEDIA", "ACTIVE", "#00e5a0"),
                 _sysrow("DUCKDUCKGO", "ACTIVE", "#00e5a0"),
                 _sysrow("WIKIDATA", "ACTIVE", "#00e5a0"),
-                _sysrow("NEWSAPI.ORG",
-                        rx.cond(EngineState.newsapi_org_key!="","CONNECTED","NOT SET"),
-                        rx.cond(EngineState.newsapi_org_key!="","#ff0080","rgba(220,185,240,.3)")),
-                _sysrow("NEWSDATA.IO",
-                        rx.cond(EngineState.newsdata_io_key!="","CONNECTED","NOT SET"),
-                        rx.cond(EngineState.newsdata_io_key!="","#ff0080","rgba(220,185,240,.3)")),
                 spacing="2", width="100%",
             ), class_name="ag-pan"),
 
@@ -232,11 +220,6 @@ def engine_page() -> rx.Component:
                 # Cohere
                 _quota_header("COHERE"),
                 _quota_row("  Command-R", "1000 req/month free", "#bf5fff"),
-
-                # News
-                _quota_header("NEWS SOURCES"),
-                _quota_row("  NewsAPI.org",  "100 req/day free",  "#ff0080"),
-                _quota_row("  NewsData.io",  "200 req/day free",  "#ff0080"),
 
                 # Optional paid
                 _quota_header("OPTIONAL (PAID)"),

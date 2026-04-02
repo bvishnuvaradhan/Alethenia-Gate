@@ -3,13 +3,12 @@ Free web verification sources with domain-aware APIs and smart routing.
 
 ✅ Working sources:
 - Wikipedia, Wikidata, DuckDuckGo, Google Search (always available)
-- World Bank API (statistics: GDP, inflation, population)
 - OpenAlex API (primary research source)
 - Entrez/PubMed API (medical facts)
 - arXiv API (fallback for research)
 
 Smart routing based on query type:
-- stats → World Bank
+- stats → Wikipedia + Wikidata + DuckDuckGo
 - medical → Entrez/PubMed
 - research → OpenAlex (fallback arXiv)
 - general → Wikipedia + Wikidata + DuckDuckGo
@@ -70,7 +69,7 @@ def source_diversity_score(sources: list[Source]) -> float:
     - 2 same type → 0.5 (50% diversity)
     - 2 different types → 1.0 (100% diversity)
     - 3 Wikipedia → 0.33 (low diversity)
-    - 1 Wikipedia, 1 PubMed, 1 WorldBank → 1.0 (perfect diversity)
+    - 1 Wikipedia, 1 PubMed, 1 OpenAlex → 1.0 (perfect diversity)
     """
     if not sources:
         return 0.5  # FIX: No sources = neutral, not zero
@@ -144,7 +143,6 @@ def cluster_claims(claims: list[str], threshold: float = 0.85) -> list[list[str]
 
 # 🏆 2. SOURCE CREDIBILITY (CONTEXT-AWARE)
 CREDIBILITY = {
-    "worldbank": 1.0,
     "entrez": 0.95,
     "wikidata": 0.9,
     "wikipedia": 0.75,
@@ -158,7 +156,7 @@ def get_credibility(source_name: str, query_type: str, url: str = "") -> float:
     Get context-aware credibility score for a source.
 
     Args:
-        source_name: Name of source (e.g., "worldbank", "entrez")
+        source_name: Name of source (e.g., "wikidata", "entrez")
         query_type: Type of query ("stats", "medical", "research", "general")
         url: URL of source (to check for .gov, .edu)
 
@@ -168,8 +166,6 @@ def get_credibility(source_name: str, query_type: str, url: str = "") -> float:
 
     # Domain-aware boost
     if query_type == "medical" and source_name.lower() == "entrez":
-        base += 0.2
-    elif query_type == "stats" and source_name.lower() == "worldbank":
         base += 0.2
     elif query_type == "research" and source_name.lower() == "openalex":
         base += 0.1
@@ -538,8 +534,9 @@ async def duckduckgo(query: str) -> Source | None:
                     key=lambda r: _score_ddg_result(r, query),
                     reverse=True,
                 )
-                # Use the best-ranked result as source link/title.
-                best = ranked[0]
+                # Prefer non-Wikipedia links when available for source diversity.
+                non_wiki = [r for r in ranked if "wikipedia.org" not in (r.get("href", "").lower())]
+                best = non_wiki[0] if non_wiki else ranked[0]
                 parts = []
                 for r in ranked[:3]:
                     body = (r.get("body") or "").strip()
@@ -568,6 +565,46 @@ async def duckduckgo(query: str) -> Source | None:
     src  = data.get("AbstractSource", "Web")
     url  = data.get("AbstractURL", "")
     if not text or len(text) < 40:
+        # Fallback: use related topics when abstract is missing.
+        # Many entity queries return useful RelatedTopics with real URLs.
+        related = data.get("RelatedTopics", []) or []
+        best = None
+        best_score = 0.0
+
+        for item in related:
+            # DDG sometimes nests related entries under "Topics".
+            candidates = item.get("Topics") if isinstance(item, dict) and item.get("Topics") else [item]
+            for cand in candidates:
+                if not isinstance(cand, dict):
+                    continue
+                cand_text = (cand.get("Text") or "").strip()
+                cand_url = (cand.get("FirstURL") or "").strip()
+                if len(cand_text) < 30:
+                    continue
+
+                score = 0.0
+                q_words = _query_keywords(query)
+                t_lower = cand_text.lower()
+                if q_words:
+                    score += sum(1 for w in q_words if w in t_lower) / len(q_words)
+                if cand_url and "wikipedia.org" not in cand_url.lower():
+                    score += 0.15
+
+                if score > best_score:
+                    best_score = score
+                    best = (cand_text, cand_url)
+
+        if best:
+            best_url = best[1] or ""
+            if "wikipedia.org" in best_url.lower():
+                # Skip DDG fallback when it only mirrors Wikipedia links.
+                return None
+            return Source(
+                name="DuckDuckGo: Related topic",
+                url=best_url,
+                excerpt=normalize_text(best[0])[:600],
+                confidence=0.76,
+            )
         return None
     return Source(
         name=f"DuckDuckGo / {src}",
@@ -608,134 +645,7 @@ async def wikidata(query: str) -> Source | None:
     )
 
 
-# ── 4. NewsAPI.org ────────────────────────────────────────────────────────────
-
-# ── 4. NewsAPI.org ────────────────────────────────────────────────────────────
-
-async def newsapi_org(query: str) -> Source | None:
-    key = os.getenv("NEWSAPI_ORG_KEY", "").strip()
-    if not key:
-        return None
-    q    = urllib.parse.quote(query[:100])
-    data = await _get(
-        f"https://newsapi.org/v2/everything?q={q}&sortBy=relevancy&pageSize=10&language=en",
-        headers={"X-Api-Key": key},
-    )
-    if not data or data.get("status") != "ok":
-        return None
-    articles = data.get("articles", [])
-    if not articles:
-        return None
-
-    # Filter for relevance: score ALL articles and pick the BEST one
-    query_kws = _query_keywords(query)
-    best = None
-    best_score = 0
-
-    for a in articles:
-        title = (a.get("title") or "").lower()
-        desc  = (a.get("description") or "").lower()
-        text = f"{title} {desc}"
-
-        # Score this article
-        if query_kws:
-            matches = sum(1 for kw in query_kws if kw in text)
-            score = matches / len(query_kws) if query_kws else 0
-        else:
-            score = 1.0  # No keywords to match, accept first
-
-        # Keep best article so far
-        if score > best_score:
-            best_score = score
-            best = a
-
-    # Strict filtering: require 60%+ keyword match for news articles
-    # This prevents completely unrelated content (e.g., markets news for animal queries)
-    if not best or (query_kws and best_score < 0.6):
-        return None
-
-    title = (best.get("title") or "").strip()
-    desc  = (best.get("description") or "").strip()
-    src   = (best.get("source", {}).get("name") or "")
-    parts = []
-    if title:
-        parts.append(f"[{src}] {title}")
-    if desc:
-        parts.append(desc[:200])
-    if not parts:
-        return None
-
-    return Source(
-        name=f"NewsAPI.org / {src}",
-        url=best.get("url", ""),
-        excerpt=normalize_text(" | ".join(parts))[:600],
-        confidence=0.72,
-    )
-
-
-# ── 5. NewsData.io ────────────────────────────────────────────────────────────
-
-async def newsdata_io(query: str) -> Source | None:
-    key = os.getenv("NEWSDATA_IO_KEY", "").strip()
-    if not key:
-        return None
-    q    = urllib.parse.quote(query[:100])
-    data = await _get(
-        f"https://newsdata.io/api/1/news?apikey={key}&q={q}&language=en&size=10"
-    )
-    if not data or data.get("status") != "success":
-        return None
-    articles = data.get("results", [])
-    if not articles:
-        return None
-
-    # Filter for relevance: score ALL articles and pick the BEST one
-    query_kws = _query_keywords(query)
-    best = None
-    best_score = 0
-
-    for a in articles:
-        title = (a.get("title") or "").lower()
-        desc  = (a.get("description") or "").lower()
-        text = f"{title} {desc}"
-
-        # Score this article
-        if query_kws:
-            matches = sum(1 for kw in query_kws if kw in text)
-            score = matches / len(query_kws) if query_kws else 0
-        else:
-            score = 1.0  # No keywords to match, accept first
-
-        # Keep best article so far
-        if score > best_score:
-            best_score = score
-            best = a
-
-    # Strict filtering: require 60%+ keyword match for news articles
-    # This prevents completely unrelated content (e.g., markets news for animal queries)
-    if not best or (query_kws and best_score < 0.6):
-        return None
-
-    title = (best.get("title") or "").strip()
-    desc  = (best.get("description") or "").strip()
-    src   = (best.get("source_id") or "")
-    parts = []
-    if title:
-        parts.append(f"[{src}] {title}")
-    if desc:
-        parts.append(desc[:150])
-    if not parts:
-        return None
-
-    return Source(
-        name=f"NewsData.io / {src}",
-        url=best.get("link", ""),
-        excerpt=normalize_text(" | ".join(parts))[:600],
-        confidence=0.70,
-    )
-
-
-# ── 6. Google Search Result Link ──────────────────────────────────────────────
+# ── 4. Google Search Result Link ──────────────────────────────────────────────
 
 async def google_search(query: str) -> Source | None:
     """
@@ -755,6 +665,29 @@ async def google_search(query: str) -> Source | None:
         )
     except Exception:
         return None
+
+
+async def civic_reference(query: str) -> Source | None:
+    """Provide high-trust civic references for specific factual civic-symbol queries."""
+    q = query.lower()
+
+    if "national symbols" in q and "india" in q:
+        return Source(
+            name="India.gov.in: National Symbols",
+            url="https://knowindia.india.gov.in/national-symbols.php",
+            excerpt="Official Government of India reference page for national symbols.",
+            confidence=0.9,
+        )
+
+    if "national bird" in q and "india" in q:
+        return Source(
+            name="India.gov.in: National Symbols",
+            url="https://knowindia.india.gov.in/national-symbols.php",
+            excerpt="Government reference listing India's national symbols including the national bird.",
+            confidence=0.9,
+        )
+
+    return None
 
 
 # ── Query builder ─────────────────────────────────────────────────────────────
@@ -837,6 +770,13 @@ def build_queries(prompt: str, response: str) -> list[str]:
     if nb:
         country = nb.group(1).strip().rstrip("?.!,")
         queries.insert(0, f"national bird of {country} official")
+
+    ns = re.search(r"national\s+symbols?\s+of\s+([a-z\s]+)", p)
+    if ns:
+        country = ns.group(1).strip().rstrip("?.!,")
+        queries.insert(0, f"national symbols of {country} official government")
+        queries.append(f"{country} official state symbols national animal bird flower")
+        queries.append(f"{country} national emblem flag anthem symbols list")
 
     # Generic fallback — clean up question words
     if not queries:
@@ -945,47 +885,7 @@ def parse_abstract(inv_index: dict) -> str:
         return ""
 
 
-# 1. WORLD BANK API (Statistics)
-async def worldbank_search(query: str) -> Source | None:
-    """Search World Bank for economic indicators."""
-    q_lower = query.lower()
-
-    # Detect indicator dynamically
-    if "gdp" in q_lower:
-        indicator = "NY.GDP.MKTP.CD"
-        label = "GDP"
-    elif "inflation" in q_lower:
-        indicator = "FP.CPI.TOTL.ZG"
-        label = "Inflation"
-    else:
-        indicator = "SP.POP.TOTL"
-        label = "Population"
-
-    try:
-        url = f"http://api.worldbank.org/v2/country/all/indicator/{indicator}?format=json&per_page=250"
-        data = await _get(url)
-
-        if not data or len(data) < 2:
-            return None
-
-        records = data[1]
-        # Find latest non-null value
-        latest = next((r for r in records if r.get("value") is not None), None)
-
-        if not latest:
-            return None
-
-        return Source(
-            name=f"World Bank: {label}",
-            url="https://data.worldbank.org",
-            excerpt=f"{label}: {latest.get('value')} ({latest.get('date')})",
-            confidence=0.95,
-        )
-    except Exception:
-        return None
-
-
-# 2. OpenAlex API (Research — Primary)
+# 1. OpenAlex API (Research — Primary)
 async def openalex_search(query: str) -> Source | None:
     """Search OpenAlex for academic papers."""
     try:
@@ -1014,7 +914,7 @@ async def openalex_search(query: str) -> Source | None:
         return None
 
 
-# 3. Entrez/PubMed API (Medical)
+# 2. Entrez/PubMed API (Medical)
 async def entrez_search(query: str) -> Source | None:
     """Search PubMed for medical facts."""
     try:
@@ -1039,7 +939,7 @@ async def entrez_search(query: str) -> Source | None:
         return None
 
 
-# 4. arXiv API (Research fallback)
+# 3. arXiv API (Research fallback)
 async def arxiv_search(query: str) -> Source | None:
     """Search arXiv as fallback for research."""
     try:
@@ -1074,7 +974,6 @@ WEIGHTS = {
     "wikipedia": 0.3,
     "duckduckgo": 0.2,
     "google": 0.25,
-    "worldbank": 0.5,
     "openalex": 0.4,
     "entrez": 0.5,
     "arxiv": 0.3,
@@ -1084,9 +983,6 @@ WEIGHTS = {
 def adjust_weight(source_name: str, query_type: str) -> float:
     """Dynamically adjust weight based on query type."""
     base = WEIGHTS.get(source_name, 0.1)
-
-    if query_type == "stats" and source_name == "worldbank":
-        return 0.8  # High weight for stats
 
     if query_type == "medical" and source_name == "entrez":
         return 0.8  # High weight for medical
@@ -1108,9 +1004,11 @@ async def smart_search(claim_obj: dict) -> list[Source]:
     sources = []
 
     if qtype == "stats":
-        # Parallelize with timeout protection
+        # Stats now rely on general public sources (World Bank integration removed).
         results = await asyncio.gather(
-            safe_call(tracked_task(worldbank_search(query)), timeout=6),
+            safe_call(tracked_task(wikipedia(query)), timeout=5),
+            safe_call(tracked_task(wikidata(query)), timeout=5),
+            safe_call(tracked_task(duckduckgo(query)), timeout=5),
             return_exceptions=True
         )
         sources = [r for r in results if isinstance(r, Source) and r is not None]
@@ -1157,10 +1055,7 @@ async def smart_search(claim_obj: dict) -> list[Source]:
 # ── Main fetch ─────────────────────────────────────────────────────────────────
 
 async def fetch_all_sources(queries: list[str]) -> list[Source]:
-    """Fetch from all sources in two stages.
-    Stage 1: Wikipedia + DuckDuckGo + Google (to refine query for news APIs)
-    Stage 2: NewsAPI + NewsData (using refined query)
-    """
+    """Fetch from built-in web sources and deduplicate results."""
     # ── Stage 1: Get initial sources to refine query ──
     primary_tasks = []
     for q in queries[:3]:
@@ -1168,6 +1063,7 @@ async def fetch_all_sources(queries: list[str]) -> list[Source]:
         primary_tasks.append(duckduckgo(q))
         primary_tasks.append(wikidata(q))
         primary_tasks.append(google_search(q))
+        primary_tasks.append(civic_reference(q))
 
     primary_results = await asyncio.gather(*primary_tasks, return_exceptions=True)
     sources: list[Source] = []
@@ -1179,28 +1075,6 @@ async def fetch_all_sources(queries: list[str]) -> list[Source]:
             if key not in seen_urls and r.excerpt:
                 seen_urls.add(key)
                 sources.append(r)
-
-    # ── Stage 2: Extract refined query from primary sources and search news APIs ──
-    # Use source NAMES (already refined by Wikipedia/DuckDuckGo/Google) for news APIs
-    refined_queries = []
-    if sources:
-        # Collect unique source names as refined queries
-        seen_names = set()
-        for s in sources[:3]:  # Top 3 sources
-            if s.name and s.name.lower() not in seen_names:
-                seen_names.add(s.name.lower())
-                # Clean up source name (remove source provider names)
-                clean_name = s.name.replace(" — ", "").replace(" | ", "").strip()
-                if len(clean_name) > 5:
-                    refined_queries.append(clean_name)
-
-    if not refined_queries:
-        refined_queries = queries[:3]
-
-    # Search news APIs with refined queries
-    # REMOVED: NewsAPI.org and NewsData.io - using Google Search instead
-    # news_tasks = []
-    # ... news API code removed ...
 
     # Ensure at least 2 sources are returned
     if len(sources) < 2:
