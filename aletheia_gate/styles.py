@@ -51,6 +51,7 @@ html,body{height:100%;background:var(--bg);color:#fff;font-family:var(--fb);over
 @keyframes lgrow{from{width:0;}to{width:100%;}}
 @keyframes nring{0%{box-shadow:0 0 0 0 rgba(255,0,128,.5);}70%{box-shadow:0 0 0 14px rgba(255,0,128,0);}100%{box-shadow:0 0 0 0 rgba(255,0,128,0);}}
 @keyframes cbg{0%{background-position:0% 0%;}50%{background-position:100% 100%;}100%{background-position:0% 0%;}}
+@keyframes mgpulse{0%,100%{opacity:1;text-shadow:0 0 8px #ff00ff,0 0 16px rgba(255,0,255,.4);}50%{opacity:.65;text-shadow:0 0 16px #ff00ff,0 0 32px rgba(255,0,255,.7),0 0 48px rgba(255,0,255,.35);}}
 
 /* ROOT */
 .ag-root{position:relative;min-height:100vh;background:var(--bg);overflow-x:hidden;}

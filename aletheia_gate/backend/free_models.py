@@ -51,7 +51,7 @@ async def _groq_roleplay(prompt: str, model_name: str, groq_key: str) -> ModelRe
         resp = await AsyncGroq(api_key=groq_key).chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": rp}],
-            max_tokens=600, temperature=0.4,
+            max_tokens=2048, temperature=0.3, top_p=0.95,
         )
         return ModelResult(
             name=model_name,
@@ -137,7 +137,7 @@ async def _web_answer(prompt: str) -> str:
 
 # ── Individual callers ────────────────────────────────────────────────────────
 
-async def call_groq(prompt: str, max_tokens: int = 600) -> ModelResult:
+async def call_groq(prompt: str, max_tokens: int = 1500) -> ModelResult:
     key = os.getenv("GROQ_API_KEY", "").strip()
     if not key:
         return ModelResult("Groq / Llama-3.3", available=False, error="No key")
@@ -160,7 +160,7 @@ async def call_groq(prompt: str, max_tokens: int = 600) -> ModelResult:
                            latency=int((time.time()-t0)*1000), error=str(e)[:100])
 
 
-async def call_gemini(prompt: str, max_tokens: int = 600) -> ModelResult:
+async def call_gemini(prompt: str, max_tokens: int = 1500) -> ModelResult:
     """
     Gemini cascade: tries each model in order until one works.
     gemini-2.5-pro-preview → gemini-2.5-pro → gemini-2.5-flash → gemini-2.5-flash-lite

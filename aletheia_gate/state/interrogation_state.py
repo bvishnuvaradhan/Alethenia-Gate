@@ -14,26 +14,15 @@ def _filter_stream_for_relevance(full_response: str, prompt: str) -> str:
     """Filter streamed response to show only relevant sentences/paragraphs."""
     if not full_response or not prompt:
         return full_response
-    
+
     # Remove citation/metadata lines first (Image source, Current topic, etc.)
-    lines = [l for l in full_response.split('\n') 
+    lines = [l for l in full_response.split('\n')
              if not re.search(r'image\s+source|author:|license:|current\s+topic|letsdiskuss', l, re.IGNORECASE)]
     full_response = '\n'.join(lines)
-    
-    # Split into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', full_response)
-    
-    # Filter: keep only sentences relevant to prompt
-    relevant_sents = [s.strip() for s in sentences 
-                      if s.strip() and _is_segment_relevant(s.strip(), prompt)]
-    
-    # Rejoin
-    filtered = " ".join(relevant_sents)
-    
-    # Normalize text: fix concatenations and whitespace
-    filtered = normalize_text(filtered)
-    
-    return filtered if filtered else full_response  # Fallback to original if all filtered
+
+    # Don't over-filter - keep the full response as-is to avoid cutting off mid-sentence
+    # The segmentation phase will handle relevance filtering
+    return full_response.strip() if full_response.strip() else ""
 
 
 class IntState(State):
@@ -94,7 +83,8 @@ class IntState(State):
         ]
         self.segments          = [
             SegmentItem(text=s.text, status=s.status,
-                        reason=s.reason or "", confidence=round(s.confidence, 2))
+                        reason=s.reason or "", confidence=round(s.confidence, 2),
+                        explanation=s.explanation or "", failed_entities=s.failed_entities or [])
             for s in r.segments
         ]
         self.web_sources       = r.web_sources

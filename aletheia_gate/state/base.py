@@ -21,6 +21,8 @@ class SegmentItem(BaseModel):
     status: str = "uncertain"
     reason: str = ""
     confidence: float = 0.5
+    explanation: str = ""  # Forensic S-P-O explanation (VOID/VERIFIED/PARTIAL/CRITICAL)
+    failed_entities: list[str] = []  # Entities for UI highlighting (pulsing neon magenta)
 
 
 class AuditEntry(BaseModel):

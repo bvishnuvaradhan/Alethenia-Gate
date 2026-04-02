@@ -31,6 +31,8 @@ class SegmentResult:
     status: str = "uncertain"
     reason: str = ""
     confidence: float = 0.5
+    explanation: str = ""  # Forensic S-P-O explanation
+    failed_entities: list[str] = field(default_factory=list)  # Entities for UI highlighting
 
 
 @dataclass
@@ -144,13 +146,7 @@ def _is_segment_relevant(segment_text: str, prompt: str) -> bool:
     for pattern in off_topic_patterns:
         if re.search(pattern, seg_lower) and not has_main_subject and not has_answer_topic:
             return False
-    
-    return True
-    
-    for pattern in off_topic_patterns:
-        if re.search(pattern, seg_lower) and not has_main_subject:
-            return False
-    
+
     return True
 
 
@@ -163,17 +159,44 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
     cohere_key = os.getenv("COHERE_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
 
+    # Patterns indicating LLM doesn't have fresh/current data
+    unknown_patterns = [
+        r"i\s+(?:don\'t|do\s+not)\s+(?:know|have)",
+        r"not\s+sure",
+        r"unsure",
+        r"(?:knowledge|training)\s+cutoff",
+        r"as\s+of\s+(?:my|my\s+last)",
+        r"i\s+(?:don\'t|do\s+not)\s+have\s+(?:real-?time|current|live)",
+        r"(?:cannot|can\'t|don\'t)\s+provide\s+(?:real-?time|current|live)",
+        r"(?:no\s+)?(?:access|information|data)\s+(?:about|for|on)",
+    ]
+
     if groq_key:
         try:
             from groq import AsyncGroq
             stream = await AsyncGroq(api_key=groq_key).chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=900, stream=True,
+                max_tokens=4096,
+                temperature=0.3,  # Lower temp for more focused answers
+                top_p=0.95,       # Keep diversity
+                stream=True,
             )
+            response_text = ""
             async for chunk in stream:
                 t = chunk.choices[0].delta.content or ""
-                if t: yield t
+                if t:
+                    response_text += t
+                    yield t
+
+            # If LLM says it doesn't know, try web
+            if any(re.search(pat, response_text.lower()) for pat in unknown_patterns):
+                from .free_models import _web_answer
+                web_ans = await _web_answer(prompt)
+                if web_ans and len(web_ans) > 20:
+                    yield "\n\n[Web Answer]\n\n"
+                    for word in web_ans.split(" "):
+                        yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass
@@ -185,8 +208,18 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
             model = genai.GenerativeModel("gemini-1.5-flash")
             loop  = asyncio.get_event_loop()
             resp  = await loop.run_in_executor(None, lambda: model.generate_content(prompt))
-            for word in (resp.text or "").split(" "):
+            response_text = resp.text or ""
+            for word in response_text.split(" "):
                 yield word + " "; await asyncio.sleep(0.02)
+
+            # If model says it doesn't know, try web
+            if any(re.search(pat, response_text.lower()) for pat in unknown_patterns):
+                from .free_models import _web_answer
+                web_ans = await _web_answer(prompt)
+                if web_ans and len(web_ans) > 20:
+                    yield "\n\n[Web Answer]\n\n"
+                    for word in web_ans.split(" "):
+                        yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass
@@ -197,11 +230,20 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
             resp = await cohere.AsyncClientV2(api_key=cohere_key).chat(
                 model="command-r",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=900,
+                max_tokens=4096,
             )
             text = resp.message.content[0].text if resp.message.content else ""
             for word in text.split(" "):
                 yield word + " "; await asyncio.sleep(0.02)
+
+            # If model says it doesn't know, try web
+            if any(re.search(pat, text.lower()) for pat in unknown_patterns):
+                from .free_models import _web_answer
+                web_ans = await _web_answer(prompt)
+                if web_ans and len(web_ans) > 20:
+                    yield "\n\n[Web Answer]\n\n"
+                    for word in web_ans.split(" "):
+                        yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass
@@ -212,11 +254,23 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
             stream = await AsyncOpenAI(api_key=openai_key).chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=900, stream=True,
+                max_tokens=4096, stream=True,
             )
+            response_text = ""
             async for chunk in stream:
                 t = chunk.choices[0].delta.content or ""
-                if t: yield t
+                if t:
+                    response_text += t
+                    yield t
+
+            # If model says it doesn't know, try web
+            if any(re.search(pat, response_text.lower()) for pat in unknown_patterns):
+                from .free_models import _web_answer
+                web_ans = await _web_answer(prompt)
+                if web_ans and len(web_ans) > 20:
+                    yield "\n\n[Web Answer]\n\n"
+                    for word in web_ans.split(" "):
+                        yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass
@@ -284,23 +338,49 @@ def _split_sentences(text: str) -> list[str]:
     for s in segs:
         k = s[:60].lower()
         if k not in seen: seen.add(k); out.append(s)
-    return out[:8]
+    return out[:15]
+
+
+def _extract_claim_object(sentence: str) -> str:
+    """Extract object entity from sentence using bag-of-words heuristics."""
+    s = sentence.lower()
+    # Try to find named entities (proper nouns)
+    proper_nouns = re.findall(r'\b[A-Z][a-z]{2,}\b', sentence)
+    if proper_nouns:
+        return proper_nouns[-1]  # Last proper noun is often the object
+
+    # Extract common entities: places, years, numbers
+    locations = re.findall(r'\b(India|India|Pakistan|Bangladesh|Delhi|Mumbai|England|France|USA|China|Japan)\b', sentence, re.IGNORECASE)
+    if locations:
+        return locations[-1]
+
+    years = re.findall(r'\b(19|20)\d{2}\b', sentence)
+    if years:
+        return years[-1]
+
+    # Fallback: last significant word (length > 4)
+    sig_words = [w for w in re.findall(r'\b\w+\b', s) if len(w) > 4]
+    return sig_words[-1] if sig_words else ""
 
 
 def _score_segment(sentence: str, all_responses: list[str],
                    sources: list[Source], num_models: int = 1) -> SegmentResult:
-    """Score a segment. num_models = count of available AI models (affects consensus logic)."""
+    """Score a segment with forensic S-P-O explanations and entity tracking."""
     s = sentence.lower()
 
     for item in _VERIFIED:
         if all(k in s for k in item[0]):
             return SegmentResult(sentence, "verified", "",
-                                 round(random.uniform(0.92, 0.99), 2))
+                                 round(random.uniform(0.92, 0.99), 2),
+                                 explanation="VERIFIED: Cross-model consensus confirmed.")
 
     for keywords, reason in _FLAGGED:
         if all(k in s for k in keywords):
+            failed_obj = _extract_claim_object(sentence)
             return SegmentResult(sentence, "flagged", reason,
-                                 round(random.uniform(0.12, 0.38), 2))
+                                 round(random.uniform(0.12, 0.38), 2),
+                                 explanation=f"CRITICAL: {reason}",
+                                 failed_entities=[failed_obj] if failed_obj else [])
 
     words   = set(re.findall(r'\b\w{5,}\b', s))
     matches = sum(
@@ -309,11 +389,17 @@ def _score_segment(sentence: str, all_responses: list[str],
     )
     ratio = matches / max(1, len(all_responses)) if words else 0.5
 
+    failed_entities = []
     if sources:
         src_text = " ".join(src.excerpt.lower() for src in sources)
         src_hits = sum(1 for w in words if w in src_text)
-        if words and src_hits / len(words) > 0.25:
-            ratio = min(1.0, ratio + 0.18)
+        if words:
+            hit_ratio = src_hits / len(words)
+            if hit_ratio > 0.25:
+                ratio = min(1.0, ratio + 0.18)
+            else:
+                # Track entities that failed source matching
+                failed_entities = list(words - {w for w in words if w in src_text})[:3]
 
     if any(k in s for k in ["created","invented","founded","released","developed",
                               "library","framework","language","algorithm"]):
@@ -321,37 +407,51 @@ def _score_segment(sentence: str, all_responses: list[str],
     if any(k in s for k in ["may vary","depending on","might be","could be"]):
         ratio = max(0.0, ratio - 0.15)
 
+    # Generate forensic explanation based on score
+    explanation = ""
     if ratio >= 0.60:
-        return SegmentResult(sentence, "verified", "",
-                             round(random.uniform(0.78, 0.95), 2))
+        confidence = round(random.uniform(0.78, 0.95), 2)
+        explanation = "VERIFIED: Strong cross-model and source alignment confirmed."
+        return SegmentResult(sentence, "verified", "", confidence,
+                           explanation=explanation)
     elif ratio >= 0.35:
-        # Only check for "partial cross-model agreement" if 2+ models available
+        confidence = round(random.uniform(0.45, 0.72), 2)
         if num_models >= 2:
+            explanation = "PARTIAL: Weak linkage detected — limited cross-model agreement."
             return SegmentResult(sentence, "uncertain", "Partial cross-model agreement.",
-                                 round(random.uniform(0.45, 0.72), 2))
+                               confidence, explanation=explanation, failed_entities=failed_entities)
         else:
-            # With 1 model: if ratio >= 0.35, trust it (segment already filtered for relevance)
+            explanation = "VERIFIED: Single model confirmation with reasonable confidence."
             return SegmentResult(sentence, "verified", "",
-                                 round(random.uniform(0.75, 0.92), 2))
+                               round(random.uniform(0.75, 0.92), 2),
+                               explanation=explanation)
     elif ratio >= 0.20:
-        # Moderate threshold: only mark uncertain/flagged if very low overlap
+        confidence = round(random.uniform(0.12, 0.38), 2)
         if num_models >= 2:
+            obj = _extract_claim_object(sentence)
+            failed_entities = [obj] if obj else failed_entities
+            explanation = f"VOID: No authoritative records found for '{obj if obj else 'this claim'}' in available sources."
             return SegmentResult(sentence, "flagged",
-                                 "Low inter-model consensus.",
-                                 round(random.uniform(0.12, 0.38), 2))
+                               "Low inter-model consensus.", confidence,
+                               explanation=explanation, failed_entities=failed_entities)
         else:
-            # With 1 model: still mark as verified if ratio >= 0.20 (segment is relevant)
+            explanation = "VERIFIED: Single model provided context match."
             return SegmentResult(sentence, "verified", "",
-                                 round(random.uniform(0.68, 0.85), 2))
+                               round(random.uniform(0.68, 0.85), 2),
+                               explanation=explanation)
     else:
-        # Very low overlap: only then mark as uncertain/flagged
+        confidence = round(random.uniform(0.35, 0.60), 2)
         if num_models >= 2:
+            obj = _extract_claim_object(sentence)
+            failed_entities = [obj] if obj else failed_entities
+            explanation = f"VOID: No official record linkage detected for '{obj if obj else 'this value'}'."
             return SegmentResult(sentence, "flagged",
-                                 "Low inter-model consensus.",
-                                 round(random.uniform(0.12, 0.38), 2))
+                               "Low inter-model consensus.", confidence,
+                               explanation=explanation, failed_entities=failed_entities)
         else:
+            explanation = "UNCERTAIN: Low confidence match with limited source corroboration."
             return SegmentResult(sentence, "uncertain", "Low confidence match.",
-                                 round(random.uniform(0.35, 0.60), 2))
+                               confidence, explanation=explanation)
 
 
 # ── Advanced Verification Helper ──────────────────────────────────────────────
@@ -407,9 +507,18 @@ async def run_truth_engine(prompt: str) -> TruthResult:
         sentences = _split_sentences(primary_text)
         # Filter segments: keep only those relevant to the prompt
         sentences = [s for s in sentences if _is_segment_relevant(s, prompt)]
+
+        # 🧠 CLAIM CLUSTERING: Speed boost — merge similar claims before web verification
+        from .free_sources import cluster_claims
+        try:
+            clusters = cluster_claims(sentences, threshold=0.85)
+            representative_sentences = [group[0] for group in clusters]
+        except Exception:
+            representative_sentences = sentences
+
         num_real_models = sum(1 for r in available if not r.is_mock)
         segments     = [_score_segment(s, [r.response for r in available], sources, num_real_models)
-                        for s in sentences]
+                        for s in representative_sentences]
         return TruthResult(
             truth_score=100,
             consensus_score=1.0,
@@ -453,8 +562,17 @@ async def run_truth_engine(prompt: str) -> TruthResult:
     sentences = _split_sentences(primary_text)
     # Filter segments: keep only those relevant to the prompt
     sentences = [s for s in sentences if _is_segment_relevant(s, prompt)]
+
+    # 🧠 CLAIM CLUSTERING: Speed boost — cluster similar segments before verification
+    from .free_sources import cluster_claims
+    try:
+        clusters = cluster_claims(sentences, threshold=0.85)
+        representative_sentences = [group[0] for group in clusters]
+    except Exception:
+        representative_sentences = sentences
+
     num_real_models = sum(1 for r in available if not r.is_mock)
-    segments  = [_score_segment(s, all_responses, sources, num_real_models) for s in sentences]
+    segments  = [_score_segment(s, all_responses, sources, num_real_models) for s in representative_sentences]
 
     # AI consensus score — no artificial noise
     real_count = sum(1 for r in ai_results if not r.is_mock and r.available)

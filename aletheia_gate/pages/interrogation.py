@@ -43,6 +43,33 @@ def _seg(s) -> rx.Component:
     bl  = rx.cond(s.status=="verified","3px solid #00e5a0",rx.cond(s.status=="flagged","3px solid #ff0080","3px solid #ffaa00"))
     ico = rx.cond(s.status=="verified","✓",rx.cond(s.status=="flagged","⚠","?"))
     pct = (s.confidence * 100).to(int).to_string() + "%"
+
+    # Highlight failed entities with neon magenta pulse
+    # Render segment text with failed entities highlighted
+    has_failed = s.failed_entities.length() > 0
+
+    highlighted_text = rx.cond(
+        has_failed,
+        rx.hstack(
+            rx.text(s.text, class_name="ag-segtxt",
+                   style={"animation": "pulse 1.5s infinite",
+                           "color": "#ff00ff",
+                           "text_shadow": "0 0 12px #ff00ff, 0 0 24px rgba(255,0,255,.5)",
+                           "font_weight": "bold"}),
+            rx.box("", width="2px", height="auto"),  # Separator
+            rx.hstack(
+                rx.foreach(
+                    s.failed_entities,
+                    lambda ent: rx.badge(ent, color_scheme="pink", size="1")
+                ),
+                spacing="1"
+            ),
+            spacing="2",
+            align="center",
+        ),
+        rx.text(s.text, class_name="ag-segtxt"),
+    )
+
     return rx.hstack(
         rx.box(ico, class_name="ag-segico",
                style={"color":col,"background":lbg,"border":lbd,"text_shadow":"0 0 10px currentColor"}),
@@ -53,11 +80,30 @@ def _seg(s) -> rx.Component:
                 rx.text(pct, class_name="ag-segconf"),
                 spacing="3", align="center",
             ),
-            rx.text(s.text, class_name="ag-segtxt"),
-            rx.cond(s.reason!="",
-                rx.hstack(rx.text("⚠",font_size="11px",color="#ffaa00"),
-                          rx.text(s.reason,class_name="ag-segr"),
-                          spacing="2",align="center")),
+            highlighted_text,
+            # Show explanation HUD (VOID/VERIFIED/PARTIAL/CRITICAL messages)
+            rx.cond(
+                s.explanation != "",
+                rx.cond(
+                    s.status != "flagged",
+                    rx.hstack(
+                        rx.text("ℹ", font_size="11px", color="rgba(0,245,255,.8)"),
+                        rx.text(s.explanation, class_name="ag-segexpl",
+                                style={"color": "rgba(0,245,255,.9)", "font_size": "10px", "line_height": "1.4"}),
+                        spacing="2", align="start"
+                    ),
+                    rx.hstack(
+                        rx.text("⚠", font_size="11px", color="#ffaa00"),
+                        rx.text(
+                            rx.cond(s.explanation != "", s.explanation, s.reason),
+                            class_name="ag-segexpl",
+                            style={"color": "#ffaa00", "font_size": "10px", "line_height": "1.4"}
+                        ),
+                        spacing="2", align="start"
+                    )
+                ),
+                rx.box()  # Empty when no explanation
+            ),
             align="start", spacing="2",
         ),
         class_name="ag-seg", border_left=bl, spacing="3", align="start",
