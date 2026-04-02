@@ -739,7 +739,7 @@ def build_queries(prompt: str, response: str) -> list[str]:
     }
 
     for key, query in tech_creator.items():
-        if key in combined:
+        if re.search(rf'\b{re.escape(key)}\b', combined):
             queries.insert(0, query)   # put at front for priority
 
     # Pattern 3: Named people
@@ -756,13 +756,13 @@ def build_queries(prompt: str, response: str) -> list[str]:
         "charles darwin": "Charles Darwin evolution natural selection",
     }
     for name, query in people.items():
-        if name in combined:
+        if re.search(rf'\b{re.escape(name)}\b', combined):
             queries.append(query)
 
     # Pattern 4: Speed of light / physics constants
-    if "speed of light" in combined:
+    if re.search(r'\bspeed\s+of\s+light\b', combined, re.IGNORECASE):
         queries.append("speed of light 299792458 metres per second physics constant")
-    if "boiling point" in combined:
+    if re.search(r'\bboiling\s+point\b', combined, re.IGNORECASE):
         queries.append("boiling point water 100 degrees celsius")
 
     # Pattern 5: National symbol lookups (prevents unrelated SERP hits)

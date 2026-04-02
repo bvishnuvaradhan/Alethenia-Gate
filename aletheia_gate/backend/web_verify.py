@@ -134,7 +134,7 @@ def _search_queries(prompt: str, response: str) -> list[str]:
         "r ":         "R programming language",
     }
     for key, wiki_title in lang_map.items():
-        if key in combined:
+        if re.search(rf'\b{re.escape(key)}\b', combined):
             queries.append(wiki_title)
 
     # ── Named people ──────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ def _search_queries(prompt: str, response: str) -> list[str]:
         "hejlsberg":  "Anders Hejlsberg",
     }
     for key, wiki_name in people.items():
-        if key in combined:
+        if re.search(rf'\b{re.escape(key)}\b', combined):
             queries.append(wiki_name)
 
     # ── Science / tech topics ─────────────────────────────────────────────────
@@ -169,7 +169,7 @@ def _search_queries(prompt: str, response: str) -> list[str]:
         "neural network":       "Artificial neural network",
     }
     for key, wiki_title in topic_map.items():
-        if key in combined:
+        if re.search(rf'\b{re.escape(key)}\b', combined, re.IGNORECASE):
             queries.append(wiki_title)
 
     # ── Fallback: Extract key noun phrases from prompt + response ─────────────
