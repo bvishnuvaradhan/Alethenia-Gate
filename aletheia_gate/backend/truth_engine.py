@@ -161,14 +161,16 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
 
     # Patterns indicating LLM doesn't have fresh/current data
     unknown_patterns = [
-        r"i\s+(?:don\'t|do\s+not)\s+(?:know|have)",
-        r"not\s+sure",
+        r"i\s+(?:don\'t|do\s+not|am\s+not)\s+(?:know|have|aware)",
+        r"(?:i\s+)?(?:don\'t|do\s+not)\s+(?:have|know|recall)",
+        r"not\s+(?:sure|aware)",
         r"unsure",
         r"(?:knowledge|training)\s+cutoff",
         r"as\s+of\s+(?:my|my\s+last)",
-        r"i\s+(?:don\'t|do\s+not)\s+have\s+(?:real-?time|current|live)",
-        r"(?:cannot|can\'t|don\'t)\s+provide\s+(?:real-?time|current|live)",
-        r"(?:no\s+)?(?:access|information|data)\s+(?:about|for|on)",
+        r"(?:i\s+)?(?:don\'t|do\s+not|cannot|can\'t)\s+(?:have|provide)\s+(?:real-?time|current|live|up-to-date|latest)",
+        r"(?:no\s+)?(?:access|information|data|details)\s+(?:about|for|on|regarding)",
+        r"unable\s+to\s+(?:provide|give|tell)",
+        r"(?:this|that)\s+(?:is\s+)?(?:outside|beyond)\s+my\s+knowledge",
     ]
 
     if groq_key:
@@ -194,9 +196,19 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
                 from .free_models import _web_answer
                 web_ans = await _web_answer(prompt)
                 if web_ans and len(web_ans) > 20:
-                    yield "\n\n[Web Answer]\n\n"
+                    yield "\n\n⚠️ [UPDATED WEB ANSWER - More Current Data]\n\n"
                     for word in web_ans.split(" "):
                         yield word + " "; await asyncio.sleep(0.015)
+            else:
+                # Check if this is a time-sensitive query and web has better data
+                time_sensitive_terms = ['current', 'today', 'latest', 'exchange', 'stock', 'price', 'weather', 'now']
+                if any(term in prompt.lower() for term in time_sensitive_terms):
+                    from .free_models import _web_answer
+                    web_ans = await _web_answer(prompt)
+                    if web_ans and len(web_ans) > 20 and 'real-time' in web_ans.lower():
+                        yield "\n\n⚠️ [CURRENT DATA SUPPLEMENT from Real-time Sources]\n\n"
+                        for word in web_ans.split(" "):
+                            yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass
@@ -217,9 +229,19 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
                 from .free_models import _web_answer
                 web_ans = await _web_answer(prompt)
                 if web_ans and len(web_ans) > 20:
-                    yield "\n\n[Web Answer]\n\n"
+                    yield "\n\n⚠️ [UPDATED WEB ANSWER - More Current Data]\n\n"
                     for word in web_ans.split(" "):
                         yield word + " "; await asyncio.sleep(0.015)
+            else:
+                # Check if time-sensitive and web has better data
+                time_sensitive_terms = ['current', 'today', 'latest', 'exchange', 'stock', 'price', 'weather', 'now']
+                if any(term in prompt.lower() for term in time_sensitive_terms):
+                    from .free_models import _web_answer
+                    web_ans = await _web_answer(prompt)
+                    if web_ans and len(web_ans) > 20 and 'real-time' in web_ans.lower():
+                        yield "\n\n⚠️ [CURRENT DATA SUPPLEMENT from Real-time Sources]\n\n"
+                        for word in web_ans.split(" "):
+                            yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass
@@ -268,9 +290,19 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
                 from .free_models import _web_answer
                 web_ans = await _web_answer(prompt)
                 if web_ans and len(web_ans) > 20:
-                    yield "\n\n[Web Answer]\n\n"
+                    yield "\n\n⚠️ [UPDATED WEB ANSWER - More Current Data]\n\n"
                     for word in web_ans.split(" "):
                         yield word + " "; await asyncio.sleep(0.015)
+            else:
+                # Check if time-sensitive and web has better data
+                time_sensitive_terms = ['current', 'today', 'latest', 'exchange', 'stock', 'price', 'weather', 'now']
+                if any(term in prompt.lower() for term in time_sensitive_terms):
+                    from .free_models import _web_answer
+                    web_ans = await _web_answer(prompt)
+                    if web_ans and len(web_ans) > 20 and 'real-time' in web_ans.lower():
+                        yield "\n\n⚠️ [CURRENT DATA SUPPLEMENT from Real-time Sources]\n\n"
+                        for word in web_ans.split(" "):
+                            yield word + " "; await asyncio.sleep(0.015)
             return
         except Exception:
             pass

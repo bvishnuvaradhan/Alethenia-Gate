@@ -77,7 +77,36 @@ async def _web_answer(prompt: str) -> str:
         except Exception:
             return {}
 
-    # Try ddgs library (new name) or duckduckgo_search (old name)
+    # ── Try real-time currency exchange APIs first (for exchange rate queries) ────
+    if any(term in prompt.lower() for term in ['dollar', 'rupee', 'exchange', 'currency', 'usd', 'inr']):
+        try:
+            # Try exchangerate-api.com (free tier, real-time)
+            ex_api = await loop.run_in_executor(
+                None,
+                lambda: _fetch("https://api.exchangerate-api.com/v4/latest/USD")
+            )
+            if ex_api and "rates" in ex_api:
+                inr_rate = ex_api["rates"].get("INR")
+                if inr_rate:
+                    answers.append(f"Current Exchange Rate: 1 USD = {inr_rate:.2f} INR (Real-time)")
+        except Exception:
+            pass
+
+        # Try open exchange rates if first fails
+        if not answers:
+            try:
+                open_ex = await loop.run_in_executor(
+                    None,
+                    lambda: _fetch("https://open.er-api.com/v6/latest/USD")
+                )
+                if open_ex and "rates" in open_ex:
+                    inr_rate = open_ex["rates"].get("INR")
+                    if inr_rate:
+                        answers.append(f"Current Exchange Rate: 1 USD = {inr_rate:.2f} INR (Open ER API)")
+            except Exception:
+                pass
+
+    # ── Fallback to DuckDuckGo / Wikipedia for general queries ────
     for lib_name in ["ddgs", "duckduckgo_search"]:
         try:
             if lib_name == "ddgs":
@@ -86,19 +115,20 @@ async def _web_answer(prompt: str) -> str:
                 from ddgs import DDGS
             def _ddg():
                 with DDGS() as ddgs:
-                    return list(ddgs.text(prompt, max_results=3))
+                    return list(ddgs.text(prompt, max_results=5))
             results = await loop.run_in_executor(None, _ddg)
-            for r in results[:2]:
+            for r in results[:3]:  # Take up to 3 results
                 body = r.get("body", "")
-                if body and len(body) > 30:
-                    answers.append(body[:300])
-            break
+                if body and len(body) > 50:
+                    answers.append(body[:500])  # Extract longer snippets
+            if answers:
+                break
         except Exception:
             continue
 
-    # Wikipedia
+    # DuckDuckGo API fallback
     query = re.sub(
-        r'\b(who|what|when|where|why|how|is|are|was|were|did|does|do|tell me|explain)\b',
+        r'\b(who|what|when|where|why|how|is|are|was|were|did|does|do|tell me|explain|current)\b',
         '', prompt, flags=re.IGNORECASE
     ).strip()
     query = re.sub(r'\s+', ' ', query).strip()
@@ -113,24 +143,25 @@ async def _web_answer(prompt: str) -> str:
         if abstract and len(abstract) > 50:
             answers.append(abstract)
 
+    # Wikipedia for comprehensive answers
     wiki = await loop.run_in_executor(
         None,
         lambda: _fetch(
             f"https://en.wikipedia.org/w/api.php"
-            f"?action=query&list=search&srsearch={q}&format=json&srlimit=1&origin=*"
+            f"?action=query&list=search&srsearch={q}&format=json&srlimit=3&origin=*"
         )
     )
     results = wiki.get("query", {}).get("search", [])
-    if results:
-        top_title = results[0].get("title", "").replace(" ", "_")
-        summary   = await loop.run_in_executor(
-            None,
-            lambda: _fetch(f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(top_title)}")
-        )
-        extract = summary.get("extract", "")
-        if extract and len(extract) > 50:
-            sents = re.split(r'(?<=[.!?])\s+', extract)
-            answers.append(" ".join(sents[:4]))
+    if results and not answers:  # Use wiki only if we don't have other results
+        for result in results[:1]:
+            top_title = result.get("title", "").replace(" ", "_")
+            summary   = await loop.run_in_executor(
+                None,
+                lambda: _fetch(f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(top_title)}")
+            )
+            extract = summary.get("extract", "")
+            if extract and len(extract) > 50:
+                answers.append(extract[:600])  # Get longer excerpt
 
     return "\n\n".join(answers) if answers else ""
 
