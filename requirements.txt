@@ -1,0 +1,16 @@
+reflex>=0.6.0
+
+# Free AI models
+groq>=0.4.0
+google-generativeai>=0.8.0
+cohere>=5.0.0
+anthropic>=0.25.0
+openai>=1.0.0
+
+# Web sources
+# Note: duckduckgo_search was renamed to ddgs in 2024
+ddgs>=6.0.0
+
+# Utils
+python-dotenv>=1.0.0
+pymongo>=4.8.0

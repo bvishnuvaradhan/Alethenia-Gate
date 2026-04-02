@@ -1,0 +1,40 @@
+__pycache__/
+.web
+.states
+*.py[cod]
+*.db
+assets/external/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Coverage and test artifacts
+.coverage
+.coverage.*
+htmlcov/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
