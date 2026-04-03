@@ -53,7 +53,6 @@ def _row(e) -> rx.Component:
 
 def vault_page() -> rx.Component:
     return rx.vstack(
-        rx.effect(VaultState.load),  # Auto-load when page is shown
         # ── Header: Title + Search/Buttons ────────────────────────────────────
         rx.vstack(
             # Title section

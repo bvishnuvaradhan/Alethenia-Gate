@@ -20,7 +20,7 @@ def _load_models():
             from sentence_transformers import SentenceTransformer
             _MODEL = SentenceTransformer('all-MiniLM-L6-v2')
         except Exception as e:
-            print(f"⚠ Sentence transformers unavailable: {e}")
+            print(f"[!] Sentence transformers unavailable: {e}")
             _MODEL = None
 
     if _NLP is None:
@@ -28,7 +28,7 @@ def _load_models():
             import spacy
             _NLP = spacy.load("en_core_web_sm")
         except Exception as e:
-            print(f"⚠ spaCy model unavailable: {e}")
+            print(f"[!] spaCy model unavailable: {e}")
             _NLP = None
 
 
