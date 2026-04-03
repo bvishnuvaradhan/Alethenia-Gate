@@ -1,4 +1,4 @@
-"""Vault page — fixed layout, full width, auto-loads entries."""
+"""Vault page — displays all user's interrogation results from MongoDB."""
 import reflex as rx
 from ..state.vault_state import VaultState
 from .ui import corners, glass, hud
@@ -14,8 +14,13 @@ def _row(e) -> rx.Component:
     rbd = rx.cond(e.truth_score >= 70, "1px solid rgba(0,229,160,.25)",
           rx.cond(e.truth_score >= 40, "1px solid rgba(255,170,0,.25)",
                                        "1px solid rgba(255,0,128,.25)"))
+    ws_txt = e.web_sources.to_string() + " src"
+    segs_txt = e.segments_count.to_string() + " seg"
+    errs_txt = rx.cond(e.fact_errors_count > 0, e.fact_errors_count.to_string() + " err", "✓")
+
     return rx.hstack(
-        rx.text(e.custody_id, class_name="ag-vid",   flex_shrink="0", width="160px"),
+        rx.text(e.custody_id, class_name="ag-vid",   flex_shrink="0", width="140px",
+                font_family="'JetBrains Mono',monospace", font_size="9px"),
         rx.text(e.prompt,     class_name="ag-vq",    flex="1",
                 min_width="0", overflow="hidden", white_space="nowrap", text_overflow="ellipsis"),
         rx.hstack(
@@ -23,7 +28,13 @@ def _row(e) -> rx.Component:
                    style={"background": sc, "box_shadow": "0 0 8px currentColor"}),
             rx.text(e.truth_score, class_name="ag-vscore",
                     style={"color": sc, "text_shadow": "0 0 10px currentColor"}),
-            spacing="2", align="center", flex_shrink="0", width="56px",
+            spacing="2", align="center", flex_shrink="0", width="50px",
+        ),
+        rx.hstack(
+            rx.text(ws_txt, font_size="9px", color="rgba(0,207,255,.6)"),
+            rx.text(segs_txt, font_size="9px", color="rgba(0,229,160,.6)"),
+            rx.text(errs_txt, font_size="9px", color=rx.cond(e.fact_errors_count > 0, "#ff3355", "#00e5a0")),
+            spacing="2", flex_shrink="0",
         ),
         rx.box(
             risk,
@@ -33,13 +44,16 @@ def _row(e) -> rx.Component:
         ),
         class_name="ag-vrow",
         align="center",
-        spacing="4",
+        spacing="3",
         width="100%",
+        on_click=lambda: VaultState.select_result(e.custody_id),
+        _hover={"background": "rgba(0,245,255,.05)", "cursor": "pointer"},
     )
 
 
 def vault_page() -> rx.Component:
     return rx.vstack(
+        rx.effect(VaultState.load),  # Auto-load when page is shown
         # ── Header: Title + Search/Buttons ────────────────────────────────────
         rx.vstack(
             # Title section
@@ -52,16 +66,17 @@ def vault_page() -> rx.Component:
                     style={"text_shadow": "0 0 20px rgba(0,207,255,.15)"},
                 ),
                 rx.text(
-                    "Immutable forensic record of all interrogation sessions.",
+                    "All interrogation sessions for this user.",
                     font_family="'JetBrains Mono',monospace",
                     font_size="10px", color="rgba(220,185,240,.42)",
                 ),
                 spacing="2", align="start", width="100%",
             ),
-            # Search/buttons section
+            # Search section
             rx.hstack(
+                rx.text("Search queries:", font_size="9px", color="rgba(220,185,240,.6)"),
                 rx.input(
-                    placeholder="Search...",
+                    placeholder="Filter...",
                     value=VaultState.vault_search,
                     on_change=VaultState.set_search,
                     class_name="ag-input",
@@ -69,14 +84,7 @@ def vault_page() -> rx.Component:
                     min_width="0",
                 ),
                 rx.box(
-                    "SEARCH",
-                    class_name="ag-btn ag-btn-sm",
-                    on_click=VaultState.search,
-                    cursor="pointer",
-                    flex_shrink="0",
-                ),
-                rx.box(
-                    "↻ REFRESH",
+                    "↻ RELOAD",
                     class_name="ag-btn ag-btn-sm",
                     on_click=VaultState.load,
                     cursor="pointer",
@@ -93,10 +101,11 @@ def vault_page() -> rx.Component:
             rx.vstack(
                 # Column headers
                 rx.hstack(
-                    rx.text("CUSTODY ID", class_name="ag-vcol", flex_shrink="0", width="160px"),
-                    rx.text("QUERY",      class_name="ag-vcol", flex="1"),
-                    rx.text("SCORE",      class_name="ag-vcol", flex_shrink="0", width="56px"),
-                    rx.text("RISK",       class_name="ag-vcol", flex_shrink="0", width="60px"),
+                    rx.text("CUSTODY ID", class_name="ag-vcol", flex_shrink="0", width="140px", font_size="9px"),
+                    rx.text("QUERY",      class_name="ag-vcol", flex="1", font_size="9px"),
+                    rx.text("SCORE",      class_name="ag-vcol", flex_shrink="0", width="50px", font_size="9px"),
+                    rx.text("SOURCES",    class_name="ag-vcol", flex_shrink="0", font_size="9px"),
+                    rx.text("RISK",       class_name="ag-vcol", flex_shrink="0", width="70px", font_size="9px"),
                     class_name="ag-vth", width="100%",
                 ),
                 # Rows

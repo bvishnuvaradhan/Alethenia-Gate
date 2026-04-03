@@ -191,18 +191,6 @@ def dashboard_page() -> rx.Component:
                             State.models.length() > 0,
                             rx.vstack(
                                 rx.foreach(State.models, _mrow),
-                                # Note when OpenAI is not set
-                                rx.cond(
-                                    ~State.openai_active,
-                                    rx.hstack(
-                                        rx.text("⚠", font_size="10px", color="#ffaa00"),
-                                        rx.text("OpenAI key not set — using Groq roleplay for that slot",
-                                                font_family="'JetBrains Mono',monospace",
-                                                font_size="9px", color="rgba(255,170,0,.5)"),
-                                        spacing="2", align="center",
-                                        padding="6px 0", border_top="1px solid rgba(0,245,255,.05)",
-                                    ),
-                                ),
                                 spacing="0", width="100%",
                             ),
                             rx.center(

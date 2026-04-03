@@ -8,6 +8,7 @@ from ..backend.fact_checker import run_fact_check
 from ..backend.vault_db import save_audit
 from ..backend.free_sources import normalize_text, get_styled_claim
 from ..backend.safety_wrapper import safe_execute, is_valid_prompt, get_cached_result, cache_result
+from ..backend.mongodb_store import save_query_result
 
 
 def _filter_stream_for_relevance(full_response: str, prompt: str) -> str:
@@ -230,7 +231,7 @@ class IntState(State):
         cache_result(p, (r, fc))
         yield
 
-        # ── STEP 5: SEAL TO VAULT ─────────────────────────────────────────
+        # ── STEP 5: SEAL TO VAULT & MONGODB ──────────────────────────────────
         self.status_msg = "🔐 Sealing to vault..."
         yield
 
@@ -245,6 +246,61 @@ class IntState(State):
             "web_score": r.web_score,
             "errors_found": len(fc.errors_found),
         })
+
+        # Save full result to MongoDB for later retrieval
+        username = self.username or "anonymous"
+        result_data = {
+            "created_at": time.time(),
+            "prompt": p,
+            "truth_score": penalised_score,
+            "consensus_score": r.consensus_score,
+            "semantic_similarity": r.semantic_similarity,
+            "source_alignment": r.source_alignment,
+            "chain_of_custody_id": r.chain_of_custody_id,
+            "latency_total": r.latency_total,
+            "web_sources": r.web_sources,
+            "web_score": r.web_score,
+            "web_summary": r.web_summary,
+            "facts_verified": r.facts_verified,
+            "facts_unverified": r.facts_unverified,
+            "web_source_names": r.web_source_names,
+            "web_source_urls": r.web_source_urls,
+            "models": [
+                {
+                    "name": m.name,
+                    "response": m.response[:200] if m.response else "",  # Truncate for storage
+                    "score": m.score,
+                    "latency": m.latency,
+                    "available": m.available,
+                    "error": m.error,
+                }
+                for m in r.models
+            ],
+            "segments": [
+                {
+                    "text": s.text,
+                    "status": s.status,
+                    "confidence": s.confidence,
+                    "explanation": s.explanation,
+                    "failed_entities": s.failed_entities,
+                }
+                for s in r.segments
+            ],
+            "fact_errors": [
+                {
+                    "claim": e.claim,
+                    "correction": e.correction,
+                    "confidence": e.confidence,
+                    "source": e.source,
+                }
+                for e in fc.errors_found
+            ],
+            "fact_check_done": fc.checked,
+            "fact_penalty": fc.penalty,
+        }
+
+        await save_query_result(username, result_data)
+
         self.audit_log = [
             AuditEntry(prompt=p[:80], truth_score=penalised_score,
                        custody_id=r.chain_of_custody_id,

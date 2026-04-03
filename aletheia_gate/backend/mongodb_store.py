@@ -21,6 +21,7 @@ except Exception:
 _DB_NAME = "aletheia_gate"
 _USERS = "users"
 _API_KEYS = "api_keys"
+_RESULTS = "query_results"
 
 _client: Any = None
 
@@ -88,6 +89,10 @@ def _ensure_indexes_sync() -> None:
     db[_USERS].create_index("username", unique=True)
     db[_USERS].create_index("email", unique=True)
     db[_API_KEYS].create_index("username", unique=True)
+    # Results indexes - for fast lookup by username and timestamp
+    db[_RESULTS].create_index("username")
+    db[_RESULTS].create_index("created_at", sparse=True)
+    db[_RESULTS].create_index([("username", 1), ("created_at", -1)])
 
 
 def _create_user_sync(username: str, email: str, password: str) -> tuple[bool, str]:
@@ -205,3 +210,105 @@ def apply_keys_to_env(keys: dict[str, Any]) -> None:
             os.environ[env_key] = val
         else:
             os.environ.pop(env_key, None)
+
+
+def _save_query_result_sync(username: str, result_data: dict[str, Any]) -> tuple[bool, str]:
+    """Save interrogation result to MongoDB."""
+    try:
+        _ensure_indexes_sync()
+        result_doc = {
+            "username": username,
+            "created_at": result_data.get("created_at"),
+            "prompt": result_data.get("prompt"),
+            "truth_score": result_data.get("truth_score"),
+            "consensus_score": result_data.get("consensus_score"),
+            "semantic_similarity": result_data.get("semantic_similarity"),
+            "source_alignment": result_data.get("source_alignment"),
+            "chain_of_custody_id": result_data.get("chain_of_custody_id"),
+            "latency_total": result_data.get("latency_total"),
+            "web_sources": result_data.get("web_sources"),
+            "web_score": result_data.get("web_score"),
+            "web_summary": result_data.get("web_summary"),
+            "facts_verified": result_data.get("facts_verified", []),
+            "facts_unverified": result_data.get("facts_unverified", []),
+            "web_source_names": result_data.get("web_source_names", []),
+            "web_source_urls": result_data.get("web_source_urls", []),
+            "models": result_data.get("models", []),
+            "segments": result_data.get("segments", []),
+            "fact_errors": result_data.get("fact_errors", []),
+            "fact_check_done": result_data.get("fact_check_done"),
+            "fact_penalty": result_data.get("fact_penalty"),
+        }
+        _db()[_RESULTS].insert_one(result_doc)
+        return True, result_data.get("chain_of_custody_id", "")
+    except PyMongoError as e:
+        return False, str(e)
+
+
+def _get_query_results_sync(username: str, limit: int = 50) -> list[dict]:
+    """Retrieve recent query results for user."""
+    try:
+        _ensure_indexes_sync()
+        results = list(
+            _db()[_RESULTS]
+            .find({"username": username})
+            .sort("created_at", -1)
+            .limit(limit)
+        )
+        # Convert ObjectId to string for JSON serialization
+        for r in results:
+            if "_id" in r:
+                r["_id"] = str(r["_id"])
+        return results
+    except PyMongoError:
+        return []
+
+
+def _get_query_result_by_id_sync(username: str, custody_id: str) -> dict | None:
+    """Retrieve specific query result by custody ID."""
+    try:
+        _ensure_indexes_sync()
+        result = _db()[_RESULTS].find_one(
+            {"username": username, "chain_of_custody_id": custody_id}
+        )
+        if result and "_id" in result:
+            result["_id"] = str(result["_id"])
+        return result
+    except PyMongoError:
+        return None
+
+
+async def save_query_result(username: str, result_data: dict[str, Any]) -> tuple[bool, str]:
+    """Async wrapper for saving query results."""
+    if not username:
+        return False, "No username provided"
+    if not _PYMONGO_AVAILABLE:
+        return False, "MongoDB not available"
+    try:
+        return await asyncio.to_thread(_save_query_result_sync, username, result_data)
+    except Exception as e:
+        return False, str(e)
+
+
+async def get_query_results(username: str, limit: int = 50) -> list[dict]:
+    """Async wrapper for retrieving query results."""
+    if not username:
+        return []
+    if not _PYMONGO_AVAILABLE:
+        return []
+    try:
+        return await asyncio.to_thread(_get_query_results_sync, username, limit)
+    except Exception:
+        return []
+
+
+async def get_query_result_by_id(username: str, custody_id: str) -> dict | None:
+    """Async wrapper for retrieving specific query result."""
+    if not username or not custody_id:
+        return None
+    if not _PYMONGO_AVAILABLE:
+        return None
+    try:
+        return await asyncio.to_thread(_get_query_result_by_id_sync, username, custody_id)
+    except Exception:
+        return None

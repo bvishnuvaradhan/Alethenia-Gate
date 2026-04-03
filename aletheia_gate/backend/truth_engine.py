@@ -153,9 +153,8 @@ def _is_segment_relevant(segment_text: str, prompt: str) -> bool:
 # ── Streaming ─────────────────────────────────────────────────────────────────
 
 async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
-    """Stream from best available model: Groq → Gemini → Cohere → OpenAI → Web."""
+    """Stream from best available model: Groq → Cohere → OpenAI → Web."""
     groq_key   = os.getenv("GROQ_API_KEY",   "").strip()
-    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     cohere_key = os.getenv("COHERE_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
 
@@ -201,39 +200,6 @@ async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
                         yield word + " "; await asyncio.sleep(0.015)
             else:
                 # Check if this is a time-sensitive query and web has better data
-                time_sensitive_terms = ['current', 'today', 'latest', 'exchange', 'stock', 'price', 'weather', 'now']
-                if any(term in prompt.lower() for term in time_sensitive_terms):
-                    from .free_models import _web_answer
-                    web_ans = await _web_answer(prompt)
-                    if web_ans and len(web_ans) > 20 and 'real-time' in web_ans.lower():
-                        yield "\n\n⚠️ [CURRENT DATA SUPPLEMENT from Real-time Sources]\n\n"
-                        for word in web_ans.split(" "):
-                            yield word + " "; await asyncio.sleep(0.015)
-            return
-        except Exception:
-            pass
-
-    if gemini_key:
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            loop  = asyncio.get_event_loop()
-            resp  = await loop.run_in_executor(None, lambda: model.generate_content(prompt))
-            response_text = resp.text or ""
-            for word in response_text.split(" "):
-                yield word + " "; await asyncio.sleep(0.02)
-
-            # If model says it doesn't know, try web
-            if any(re.search(pat, response_text.lower()) for pat in unknown_patterns):
-                from .free_models import _web_answer
-                web_ans = await _web_answer(prompt)
-                if web_ans and len(web_ans) > 20:
-                    yield "\n\n⚠️ [UPDATED WEB ANSWER - More Current Data]\n\n"
-                    for word in web_ans.split(" "):
-                        yield word + " "; await asyncio.sleep(0.015)
-            else:
-                # Check if time-sensitive and web has better data
                 time_sensitive_terms = ['current', 'today', 'latest', 'exchange', 'stock', 'price', 'weather', 'now']
                 if any(term in prompt.lower() for term in time_sensitive_terms):
                     from .free_models import _web_answer

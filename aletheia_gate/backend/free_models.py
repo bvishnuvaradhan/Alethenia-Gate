@@ -1,9 +1,8 @@
 """
 Free AI model callers.
 
-Gemini cascade: gemini-2.5-pro-preview → gemini-2.5-pro → gemini-2.5-flash → gemini-2.5-flash-lite
-OpenAI: only included if OPENAI_API_KEY is set — never shown otherwise.
-Missing models: Groq roleplays them. No keys at all: web fallback.
+Cascade: Groq (llama-3.3-70b) → Gemini (if key set) → Cohere → Claude → OpenAI (if key set)
+Only models with API keys configured are shown. Web fallback if no keys available.
 """
 from __future__ import annotations
 import asyncio, json, os, random, re, time, urllib.parse, urllib.request, warnings
@@ -349,30 +348,21 @@ async def run_all_free_models(prompt: str) -> list[ModelResult]:
             for n in names
         ]
 
-    # Models to always include (free)
-    free_defs = [
-        ("Groq / Llama-3.3",         groq_key,   call_groq),
-        ("Google / Gemini",           gemini_key,  call_gemini),
-        ("Cohere / Command-R",        cohere_key,  call_cohere),
-        ("Anthropic / Claude-Haiku",  claude_key,  call_anthropic),
-    ]
-    # OpenAI only if key present
+    # Models to include - only configured ones
+    free_defs = []
+
+    if groq_key:
+        free_defs.append(("Groq / Llama-3.3", groq_key, call_groq))
+    if cohere_key:
+        free_defs.append(("Cohere / Command-R", cohere_key, call_cohere))
+    if claude_key:
+        free_defs.append(("Anthropic / Claude-Haiku", claude_key, call_anthropic))
     if openai_key:
         free_defs.append(("OpenAI / GPT-4o-mini", openai_key, call_openai))
 
-    # Opt-in only: roleplay missing providers via Groq.
-    # Default is OFF so users only see real configured API outputs.
-    allow_roleplay_mocks = os.getenv("ALLOW_ROLEPLAY_MOCKS", "0").strip().lower() in {
-        "1", "true", "yes", "on"
-    }
-    best_roleplay_key = groq_key if allow_roleplay_mocks else ""
-
     tasks_with_names = []
     for name, key, caller in free_defs:
-        if key:
-            tasks_with_names.append((name, caller(prompt)))
-        elif best_roleplay_key and name in _ROLEPLAY:
-            tasks_with_names.append((name, _groq_roleplay(prompt, name, best_roleplay_key)))
+        tasks_with_names.append((name, caller(prompt)))
 
     if not tasks_with_names:
         web_answer = await _web_answer(prompt)
