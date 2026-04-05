@@ -5,35 +5,35 @@ from .ui import corners, glass, hud
 
 
 def _row(e) -> rx.Component:
-    sc  = rx.cond(e.truth_score >= 70, "#00e5a0",
-          rx.cond(e.truth_score >= 40, "#ffaa00", "#ff0080"))
-    risk= rx.cond(e.truth_score >= 70, "LOW",
-          rx.cond(e.truth_score >= 40, "MED", "HIGH"))
-    rbg = rx.cond(e.truth_score >= 70, "rgba(0,229,160,.12)",
-          rx.cond(e.truth_score >= 40, "rgba(255,170,0,.12)", "rgba(255,0,128,.12)"))
-    rbd = rx.cond(e.truth_score >= 70, "1px solid rgba(0,229,160,.25)",
-          rx.cond(e.truth_score >= 40, "1px solid rgba(255,170,0,.25)",
+    sc  = rx.cond(e["truth_score"] >= 70, "#00e5a0",
+          rx.cond(e["truth_score"] >= 40, "#ffaa00", "#ff0080"))
+    risk= rx.cond(e["truth_score"] >= 70, "LOW",
+          rx.cond(e["truth_score"] >= 40, "MED", "HIGH"))
+    rbg = rx.cond(e["truth_score"] >= 70, "rgba(0,229,160,.12)",
+          rx.cond(e["truth_score"] >= 40, "rgba(255,170,0,.12)", "rgba(255,0,128,.12)"))
+    rbd = rx.cond(e["truth_score"] >= 70, "1px solid rgba(0,229,160,.25)",
+          rx.cond(e["truth_score"] >= 40, "1px solid rgba(255,170,0,.25)",
                                        "1px solid rgba(255,0,128,.25)"))
-    ws_txt = e.web_sources.to_string() + " src"
-    segs_txt = e.segments_count.to_string() + " seg"
-    errs_txt = rx.cond(e.fact_errors_count > 0, e.fact_errors_count.to_string() + " err", "✓")
+    ws_txt = rx.cond(e["web_sources"] > 0, str(e["web_sources"]) + " src", "0 src")
+    segs_txt = str(e["segments_count"]) + " seg"
+    errs_txt = rx.cond(e["fact_errors_count"] > 0, str(e["fact_errors_count"]) + " err", "✓")
 
     return rx.hstack(
-        rx.text(e.custody_id, class_name="ag-vid",   flex_shrink="0", width="140px",
+        rx.text(e["custody_id"], class_name="ag-vid",   flex_shrink="0", width="140px",
                 font_family="'JetBrains Mono',monospace", font_size="9px"),
-        rx.text(e.prompt,     class_name="ag-vq",    flex="1",
+        rx.text(e["prompt"],     class_name="ag-vq",    flex="1",
                 min_width="0", overflow="hidden", white_space="nowrap", text_overflow="ellipsis"),
         rx.hstack(
             rx.box(class_name="ag-dot",
                    style={"background": sc, "box_shadow": "0 0 8px currentColor"}),
-            rx.text(e.truth_score, class_name="ag-vscore",
+            rx.text(e["truth_score"], class_name="ag-vscore",
                     style={"color": sc, "text_shadow": "0 0 10px currentColor"}),
             spacing="2", align="center", flex_shrink="0", width="50px",
         ),
         rx.hstack(
             rx.text(ws_txt, font_size="9px", color="rgba(0,207,255,.6)"),
             rx.text(segs_txt, font_size="9px", color="rgba(0,229,160,.6)"),
-            rx.text(errs_txt, font_size="9px", color=rx.cond(e.fact_errors_count > 0, "#ff3355", "#00e5a0")),
+            rx.text(errs_txt, font_size="9px", color=rx.cond(e["fact_errors_count"] > 0, "#ff3355", "#00e5a0")),
             spacing="2", flex_shrink="0",
         ),
         rx.box(
@@ -46,7 +46,7 @@ def _row(e) -> rx.Component:
         align="center",
         spacing="3",
         width="100%",
-        on_click=lambda: VaultState.select_result(e.custody_id),
+        on_click=lambda: VaultState.select_result(e["custody_id"]),
         _hover={"background": "rgba(0,245,255,.05)", "cursor": "pointer"},
     )
 
