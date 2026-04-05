@@ -50,11 +50,11 @@ class VaultState(State):
         """Select a result to view details."""
         # Find the result and store it
         for entry in self.vault_log:
-            if entry.custody_id == custody_id:
+            if entry["custody_id"] == custody_id:
                 self.selected_result = {
-                    "custody_id": entry.custody_id,
-                    "prompt": entry.prompt,
-                    "truth_score": entry.truth_score,
+                    "custody_id": entry["custody_id"],
+                    "prompt": entry["prompt"],
+                    "truth_score": entry["truth_score"],
                 }
                 break
         return rx.redirect(f"/vault?id={custody_id}")
