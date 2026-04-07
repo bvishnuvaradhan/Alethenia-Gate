@@ -45,6 +45,7 @@ class IntState(State):
         self.segments = []
         self.models = []
         self.truth_score = 0
+        self.aggregated_count = 0
         self.web_sources = 0
         self.web_score = 0.0
         self.web_summary = ""
@@ -63,6 +64,12 @@ class IntState(State):
         return rx.redirect("/interrogate")
 
     def set_prompt(self, v: str): self.prompt = v
+
+    async def go_to_hub_with_result(self):
+        """Load latest result and navigate back to hub."""
+        await self.load_latest_result()
+        self.active_page = "hub"
+        yield rx.redirect("/hub")
 
     def _apply_result(self, result_tuple: tuple, prompt: str):
         """Apply truth engine and fact check results to state."""
@@ -193,8 +200,8 @@ class IntState(State):
 
         # Allow more time for multi-source verification and first-run model warmup.
         result = await safe_execute(
-            run_truth_engine(p),
-            timeout_sec=45,
+            run_truth_engine(p, self.username),
+            timeout_sec=120,
             operation_name="Consensus engine"
         )
 
@@ -249,6 +256,13 @@ class IntState(State):
 
         # Save full result to MongoDB for later retrieval
         username = self.username or "anonymous"
+        final_output = (r.web_summary or "").strip()
+        if not final_output:
+            for m in r.models:
+                if m.response:
+                    final_output = m.response
+                    break
+
         result_data = {
             "created_at": time.time(),
             "prompt": p,
@@ -261,6 +275,8 @@ class IntState(State):
             "web_sources": r.web_sources,
             "web_score": r.web_score,
             "web_summary": r.web_summary,
+            "final_output": final_output,
+            "stream_output": self.stream,
             "facts_verified": r.facts_verified,
             "facts_unverified": r.facts_unverified,
             "web_source_names": r.web_source_names,
@@ -268,11 +284,12 @@ class IntState(State):
             "models": [
                 {
                     "name": m.name,
-                    "response": m.response[:200] if m.response else "",  # Truncate for storage
+                    "response": m.response if m.response else "",
                     "score": m.score,
                     "latency": m.latency,
                     "available": m.available,
                     "error": m.error,
+                    "is_mock": getattr(m, "is_mock", False),
                 }
                 for m in r.models
             ],
@@ -280,6 +297,7 @@ class IntState(State):
                 {
                     "text": s.text,
                     "status": s.status,
+                    "reason": s.reason,
                     "confidence": s.confidence,
                     "explanation": s.explanation,
                     "failed_entities": s.failed_entities,

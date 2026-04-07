@@ -394,7 +394,7 @@ def interrogation_page() -> rx.Component:
                     rx.box(
                         rx.cond(IntState.running,"◈  ANALYZING...","⬡  ANALYZE"),
                         class_name="ag-btn", on_click=IntState.submit,
-                        cursor="pointer", align_self="flex-end", white_space="nowrap",
+                        cursor="pointer", align_self="end", white_space="nowrap",
                     ),
                     spacing="3",align="end",width="100%",
                 ),
@@ -457,6 +457,17 @@ def interrogation_page() -> rx.Component:
                     rx.text(State.err_msg,font_family="'JetBrains Mono',monospace",
                             font_size="12px",color="var(--red)"),
                     spacing="2",align="center"),class_name="ag-err"),
+            ),
+
+            # Navigation button to return to hub
+            rx.cond(
+                State.truth_score > 0,
+                rx.box(
+                    "◀  BACK TO HUB",
+                    class_name="ag-btn",
+                    on_click=IntState.go_to_hub_with_result,
+                    cursor="pointer",
+                ),
             ),
 
             spacing="4", flex="1", overflow_y="auto", width="100%", min_width="0",

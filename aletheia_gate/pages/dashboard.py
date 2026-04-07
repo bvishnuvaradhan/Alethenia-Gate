@@ -103,18 +103,25 @@ def dashboard_page() -> rx.Component:
     return rx.vstack(
         # Header — no duplicate service chips (already in topbar)
         rx.vstack(
-            rx.text(
-                "THE HUB",
-                font_family="'Orbitron',monospace",
-                font_size="28px", font_weight="900", letter_spacing="0.06em",
-                style={"text_shadow": "0 0 20px rgba(255,0,128,.18)"},
+            rx.hstack(
+                rx.vstack(
+                    rx.text(
+                        "THE HUB",
+                        font_family="'Orbitron',monospace",
+                        font_size="28px", font_weight="900", letter_spacing="0.06em",
+                        style={"text_shadow": "0 0 20px rgba(255,0,128,.18)"},
+                    ),
+                    rx.text(
+                        "Air Traffic Control for AI Truth — real-time multi-model monitoring.",
+                        font_family="'JetBrains Mono',monospace",
+                        font_size="10px", color="rgba(220,185,240,.45)",
+                    ),
+                    spacing="2", align="start", width="100%",
+                ),
+                rx.spacer(),
+                width="100%",
             ),
-            rx.text(
-                "Air Traffic Control for AI Truth — real-time multi-model monitoring.",
-                font_family="'JetBrains Mono',monospace",
-                font_size="10px", color="rgba(220,185,240,.45)",
-            ),
-            spacing="2", align="start", width="100%",
+            spacing="1", align="start", width="100%",
             class_name="ag-dash-header",
         ),
 
@@ -172,10 +179,18 @@ def dashboard_page() -> rx.Component:
                         rx.hstack(
                             hud("INTEGRITY MATRIX"),
                             rx.spacer(),
-                            rx.text(
-                                State.models.length().to_string() + " models",
-                                font_family="'JetBrains Mono',monospace",
-                                font_size="10px", color="rgba(220,185,240,.38)",
+                            rx.cond(
+                                State.aggregated_count > 0,
+                                rx.text(
+                                    State.aggregated_count.to_string() + " interrogations · " + State.models.length().to_string() + " models",
+                                    font_family="'JetBrains Mono',monospace",
+                                    font_size="10px", color="rgba(220,185,240,.38)",
+                                ),
+                                rx.text(
+                                    State.models.length().to_string() + " models",
+                                    font_family="'JetBrains Mono',monospace",
+                                    font_size="10px", color="rgba(220,185,240,.38)",
+                                ),
                             ),
                         ),
                         rx.hstack(
@@ -197,6 +212,14 @@ def dashboard_page() -> rx.Component:
                                 rx.vstack(
                                     rx.text("◎", class_name="ag-empty-i"),
                                     rx.text("Run interrogation to populate", class_name="ag-empty-t"),
+                                    rx.box(
+                                        "↻  REFRESH LATEST",
+                                        class_name="ag-btn",
+                                        on_click=State.load_latest_result,
+                                        cursor="pointer",
+                                        font_size="12px",
+                                        padding="8px 12px",
+                                    ),
                                     align="center", spacing="2",
                                 ),
                                 padding="28px",
@@ -211,13 +234,6 @@ def dashboard_page() -> rx.Component:
             ),
 
             spacing="4", align="stretch", width="100%",
-        ),
-
-        rx.box(
-            "⬡  NEW INTERROGATION",
-            class_name="ag-btn",
-            on_click=State.go_page("interrogate"),
-            cursor="pointer",
         ),
 
         spacing="5", width="100%", class_name="ag-dash",

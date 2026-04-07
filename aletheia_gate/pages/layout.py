@@ -27,8 +27,9 @@ def _ni(pid: str, ico: str, lbl: str) -> rx.Component:
             lbl,
             style={"color": rx.cond(active, "#ff0080", "rgba(220,185,240,.42)")},
         ),
-        # Use go_vault for vault so it auto-loads entries
-        on_click=(VaultState.go_vault if pid == "vault"
+        # Use appropriate handler for each page
+        on_click=(State.go_hub_with_load if pid == "hub"
+                  else VaultState.go_vault if pid == "vault"
                   else IntState.go_interrogate if pid == "interrogate"
                   else State.go_page(pid)),
         class_name=rx.cond(active, "ag-ni ag-ni-a", "ag-ni"),
@@ -65,28 +66,25 @@ def sidebar() -> rx.Component:
             *[_ni(*n) for n in NAV],
             flex="1", padding_y="10px",
         ),
-        # Truth score
-        rx.cond(
-            State.truth_score > 0,
-            rx.vstack(
-                rx.text("TRUTH SCORE", class_name="ag-scorelbl"),
-                rx.text(
-                    State.truth_score,
-                    class_name="ag-scorenum",
-                    style={
-                        "color": State.score_color,
-                        "text_shadow": "0 0 25px currentColor, 0 0 50px currentColor",
-                    },
-                ),
-                rx.text(
-                    State.risk_label,
-                    font_family="'Orbitron',monospace",
-                    font_size="8px", letter_spacing="0.12em",
-                    style={"color": State.score_color, "text_shadow": "0 0 10px currentColor"},
-                ),
-                align="center", spacing="1",
-                class_name="ag-sbscore",
+        # Truth score (always visible; reflects dashboard aggregate when loaded)
+        rx.vstack(
+            rx.text("TRUTH SCORE", class_name="ag-scorelbl"),
+            rx.text(
+                State.truth_score,
+                class_name="ag-scorenum",
+                style={
+                    "color": State.score_color,
+                    "text_shadow": "0 0 25px currentColor, 0 0 50px currentColor",
+                },
             ),
+            rx.text(
+                State.risk_label,
+                font_family="'Orbitron',monospace",
+                font_size="8px", letter_spacing="0.12em",
+                style={"color": State.score_color, "text_shadow": "0 0 10px currentColor"},
+            ),
+            align="center", spacing="1",
+            class_name="ag-sbscore",
         ),
         # Operator
         rx.vstack(
@@ -110,7 +108,7 @@ def sidebar() -> rx.Component:
 
 
 def topbar() -> rx.Component:
-    svc_always = [("GROQ","#00e5a0"),("LLAMA","#ff0080"),("SURREAL DB","#bf5fff")]
+    svc_always = []
     return rx.hstack(
         rx.hstack(
             rx.box(class_name="ag-tbbar"),

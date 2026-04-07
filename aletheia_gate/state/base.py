@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio, os
 import reflex as rx
 from pydantic import BaseModel
-from ..backend.mongodb_store import create_user, verify_user, load_user_api_keys, apply_keys_to_env
+from ..backend.mongodb_store import create_user, verify_user, load_user_api_keys, apply_keys_to_env, get_query_results
 
 
 class ModelStat(BaseModel):
@@ -65,6 +65,7 @@ class State(rx.State):
     alignment: float = 0.0
     custody_id: str = ""
     latency_ms: int = 0
+    aggregated_count: int = 0  # Number of results aggregated into dashboard
     models: list[ModelStat] = []
     segments: list[SegmentItem] = []
 
@@ -139,6 +140,148 @@ class State(rx.State):
             "terminate": "/terminate",
         }
         return rx.redirect(route_map.get(p, "/hub"))
+    
+    async def go_hub_with_load(self):
+        """Navigate to hub and auto-load dashboard data."""
+        await self.load_latest_result()
+        self.active_page = "hub"
+        yield rx.redirect("/hub")
+
+    async def load_latest_result(self):
+        """Load and aggregate ALL user results into dashboard state (averages & combined data)."""
+        username = (self.username or "").strip()
+        if not username:
+            username = "anonymous"
+        
+        # Fetch all results
+        results = await get_query_results(username, limit=100)
+        if not results:
+            # Try fallback users for backward compatibility
+            if username != "anonymous":
+                results = await get_query_results("anonymous", limit=100)
+            if not results:
+                return  # No results to load
+        
+        # ════ AGGREGATE NUMERIC METRICS ════
+        num_results = len(results)
+        avg_truth_score = sum(r.get("truth_score", 0) for r in results) / num_results if results else 0
+        avg_consensus = sum(r.get("consensus_score", 0.0) for r in results) / num_results if results else 0.0
+        avg_semantic = sum(r.get("semantic_similarity", 0.0) for r in results) / num_results if results else 0.0
+        avg_alignment = sum(r.get("source_alignment", 0.0) for r in results) / num_results if results else 0.0
+        avg_latency = sum(r.get("latency_total", 0) for r in results) / num_results if results else 0
+        avg_web_sources = sum(r.get("web_sources", 0) for r in results) / num_results if results else 0
+        avg_web_score = sum(r.get("web_score", 0.0) for r in results) / num_results if results else 0.0
+        
+        # ════ AGGREGATE MODELS (average scores per model name) ════
+        model_scores: dict[str, list[dict]] = {}  # {model_name: [list of model data]}
+        for result in results:
+            for m in result.get("models", []):
+                model_name = m.get("name", "Unknown")
+                if model_name not in model_scores:
+                    model_scores[model_name] = []
+                model_scores[model_name].append(m)
+        
+        # Calculate averages for each model
+        aggregated_models = []
+        for model_name, model_list in model_scores.items():
+            avg_score = sum(float(m.get("score", 0.0)) for m in model_list) / len(model_list) if model_list else 0.0
+            avg_latency_model = sum(int(m.get("latency", 0)) for m in model_list) / len(model_list) if model_list else 0
+            avg_available = sum(1 for m in model_list if m.get("available", True)) > len(model_list) / 2
+            
+            aggregated_models.append(
+                ModelStat(
+                    name=model_name,
+                    response="[Aggregated from " + str(len(model_list)) + " queries]",
+                    score=round(avg_score, 1),
+                    latency=int(avg_latency_model),
+                    available=avg_available,
+                    error="",
+                    is_mock=False
+                )
+            )
+        
+        # ════ COMBINE ALL SEGMENTS ════
+        all_segments = []
+        seen_segment_texts = set()
+        for result in results:
+            for s in result.get("segments", []):
+                segment_text = s.get("text", "")
+                # Avoid duplicates
+                if segment_text and segment_text not in seen_segment_texts:
+                    all_segments.append(
+                        SegmentItem(
+                            text=segment_text,
+                            status=s.get("status", "uncertain"),
+                            reason=s.get("reason", ""),
+                            confidence=float(s.get("confidence", 0.5)),
+                            explanation=s.get("explanation", ""),
+                            failed_entities=s.get("failed_entities", [])
+                        )
+                    )
+                    seen_segment_texts.add(segment_text)
+        
+        # ════ COMBINE ALL FACT ERRORS ════
+        all_fact_errors = []
+        seen_claims = set()
+        for result in results:
+            for e in result.get("fact_errors", []):
+                claim = e.get("claim", "")
+                if claim and claim not in seen_claims:
+                    all_fact_errors.append(
+                        FactErrorItem(
+                            claim=claim,
+                            correction=e.get("correction", ""),
+                            confidence=float(e.get("confidence", 0.5)),
+                            source=e.get("source", "")
+                        )
+                    )
+                    seen_claims.add(claim)
+        
+        # ════ COMBINE WEB SOURCES ════
+        all_web_source_names = []
+        all_web_source_urls = []
+        seen_sources = set()
+        for result in results:
+            names = result.get("web_source_names", [])
+            urls = result.get("web_source_urls", [])
+            for i, name in enumerate(names):
+                source_key = (name, urls[i] if i < len(urls) else "")
+                if source_key not in seen_sources:
+                    all_web_source_names.append(name)
+                    all_web_source_urls.append(urls[i] if i < len(urls) else "")
+                    seen_sources.add(source_key)
+        
+        # ════ COMBINE VERIFIED/UNVERIFIED FACTS ════
+        all_verified_facts = list(set(f for result in results for f in result.get("facts_verified", [])))
+        all_unverified_facts = list(set(f for result in results for f in result.get("facts_unverified", [])))
+        
+        # ════ POPULATE STATE WITH AGGREGATES ════
+        self.truth_score = int(avg_truth_score)
+        self.consensus = avg_consensus
+        self.semantic = avg_semantic
+        self.alignment = avg_alignment
+        self.custody_id = f"AGGREGATED_{num_results}_RESULTS"
+        self.aggregated_count = num_results
+        self.latency_ms = int(avg_latency)
+        self.web_sources = int(avg_web_sources)
+        self.web_score = avg_web_score
+        self.web_summary = f"Aggregated from {num_results} interrogations · {len(all_fact_errors)} unique issues flagged"
+        self.facts_verified = all_verified_facts
+        self.facts_unverified = all_unverified_facts
+        self.web_source_names = all_web_source_names
+        self.web_source_urls = all_web_source_urls
+        self.fact_check_done = True
+        self.fact_penalty = sum(r.get("fact_penalty", 0.0) for r in results) / num_results if results else 0.0
+        self.models = aggregated_models
+        self.segments = all_segments
+        self.fact_errors = all_fact_errors
+
+    async def load_and_go_hub(self):
+        """Load latest result and navigate to hub."""
+        await self.load_latest_result()
+        yield rx.redirect("/hub")
+
+
 
     async def do_login(self):
         u = self.login_user.strip(); p = self.login_pass.strip()
@@ -165,7 +308,9 @@ class State(rx.State):
         self.login_user = ""
         self.login_pass = ""
         self.show_login_pass = False
+        # Load aggregated dashboard data for sidebar/dashboard consistency
         yield
+        await self.load_latest_result()
         await asyncio.sleep(0.5)
         yield rx.call_script("window.location.href = '/hub'")
 

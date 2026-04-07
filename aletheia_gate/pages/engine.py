@@ -96,8 +96,6 @@ def _toggle(label: str, is_on, key: str) -> rx.Component:
 
 def engine_page() -> rx.Component:
     return rx.vstack(
-        hud("SYSTEM CONFIGURATION // ENGINE ROOM", "ag-h-p",
-            font_size="9px", letter_spacing="0.3em"),
         rx.text("SETTINGS", font_family="'Orbitron',monospace",
                 font_size="26px", font_weight="900",
                 style={"text_shadow": "0 0 20px rgba(255,0,128,.15)"}),
@@ -188,96 +186,13 @@ def engine_page() -> rx.Component:
                         ("Wikipedia API",   "No key needed — always active"),
                         ("DuckDuckGo",      "pip install ddgs — no key needed"),
                         ("Wikidata SPARQL", "No key needed — structured facts"),
+                        ("OpenAlex",        "Research/academic search — no key needed"),
+                        ("Entrez / PubMed", "Medical research — no key needed"),
+                        ("arXiv",           "Preprints — research fallback"),
+                        ("Google Search",   "Search reference link (no scraping)")
                     ]
                 ],
-                # System status
-                hud("SYSTEM STATUS", margin_top="8px"),
-                _sysrow("WIKIPEDIA", "ACTIVE", "#00e5a0"),
-                _sysrow("DUCKDUCKGO", "ACTIVE", "#00e5a0"),
-                _sysrow("WIKIDATA", "ACTIVE", "#00e5a0"),
                 spacing="2", width="100%",
-            ), class_name="ag-pan"),
-
-            # ── Panel 3: API QUOTA & USAGE ────────────────────────────────────
-            glass(corners(), rx.vstack(
-                hud("API QUOTA & USAGE STATUS"),
-                rx.text("Limits shown are for free tier.",
-                        font_family="'JetBrains Mono',monospace",
-                        font_size="9px", color="rgba(220,185,240,.35)",
-                        margin_bottom="4px"),
-
-                # Gemini — all 4 models
-                _quota_header("GOOGLE GEMINI", "cascade — uses first available"),
-                _quota_row("  2.5-pro-preview", "15 req/min · 25/day",    "#00cfff"),
-                _quota_row("  2.5-pro",          "2 req/min  · 50/day",    "#00cfff"),
-                _quota_row("  2.5-flash",         "10 req/min · 500/day",   "#00cfff"),
-                _quota_row("  2.5-flash-lite",    "30 req/min · 1500/day",  "#00cfff"),
-
-                # Groq
-                _quota_header("GROQ"),
-                _quota_row("  Llama-3.3-70b", "30 req/min · 6000 tok/min", "#00e5a0"),
-
-                # Cohere
-                _quota_header("COHERE"),
-                _quota_row("  Command-R", "1000 req/month free", "#bf5fff"),
-
-                # Optional paid
-                _quota_header("OPTIONAL (PAID)"),
-                _quota_row("  Anthropic Claude-Haiku", "Pay-per-token", "rgba(220,185,240,.4)"),
-                _quota_row("  OpenAI GPT-4o-mini",     "Pay-per-token", "rgba(220,185,240,.4)"),
-
-                spacing="0", width="100%",
-            ), class_name="ag-pan"),
-
-            # ── Panel 4: Radar sensitivity + system status ────────────────────
-            glass(corners(), rx.vstack(
-                hud("RADAR SENSITIVITY"),
-                rx.vstack(
-                    rx.hstack(
-                        rx.text("Detection Threshold", class_name="ag-slbl"),
-                        rx.spacer(),
-                        rx.text(EngineState.sensitivity.to_string()+"%",
-                                class_name="ag-sval",
-                                style={"color":"#00cfff","text_shadow":"0 0 12px rgba(0,207,255,.6)"}),
-                        align="center",
-                    ),
-                    rx.slider(value=[EngineState.sensitivity],
-                              on_change=EngineState.set_sens,
-                              min=0, max=100, width="100%", color_scheme="pink"),
-                    rx.hstack(
-                        rx.text("PERMISSIVE", font_family="'JetBrains Mono',monospace",
-                                font_size="9px", color="rgba(220,185,240,.32)"),
-                        rx.spacer(),
-                        rx.text("STRICT", font_family="'JetBrains Mono',monospace",
-                                font_size="9px", color="rgba(220,185,240,.32)"),
-                    ),
-                    spacing="3",
-                ),
-                hud("ANALYSIS MODULES"),
-                _toggle("TEMPORAL CHECK",  EngineState.tog_temporal, "temporal"),
-                _toggle("SEMANTIC CHECK",  EngineState.tog_semantic, "semantic"),
-                _toggle("FACTUAL CHECK",   EngineState.tog_factual,  "factual"),
-                _toggle("REALTIME CHECK",  EngineState.tog_realtime, "realtime"),
-                hud("AI MODEL STATUS"),
-                _sysrow("GROQ",
-                        rx.cond(EngineState.groq_key!="","CONNECTED","NOT SET"),
-                        rx.cond(EngineState.groq_key!="","#00e5a0","rgba(220,185,240,.3)")),
-                _sysrow("GEMINI",
-                        rx.cond(EngineState.gemini_key!="",
-                                rx.cond(EngineState.gemini_active_model!="",
-                                        EngineState.gemini_active_model,"KEY SET"),
-                                "NOT SET"),
-                        rx.cond(EngineState.gemini_key!="","#00cfff","rgba(220,185,240,.3)")),
-                _sysrow("COHERE",
-                        rx.cond(EngineState.cohere_key!="","CONNECTED","NOT SET"),
-                        rx.cond(EngineState.cohere_key!="","#bf5fff","rgba(220,185,240,.3)")),
-                _sysrow("ANTHROPIC",
-                        rx.cond(EngineState.anthropic_key!="","CONNECTED","NOT SET"),
-                        rx.cond(EngineState.anthropic_key!="","#00e5a0","rgba(220,185,240,.3)")),
-                rx.cond(EngineState.openai_key!="",
-                    _sysrow("OPENAI","CONNECTED","#00cfff"),
-                ),
-                spacing="3", width="100%",
             ), class_name="ag-pan"),
 
             columns="2", spacing="6", width="100%", class_name="ag-engrid",

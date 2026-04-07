@@ -73,7 +73,8 @@ class EngineState(State):
         self.cohere_key = keys.get("cohere_key", "")
         self.anthropic_key = keys.get("anthropic_key", "")
         self.openai_key = keys.get("openai_key", "")
-        apply_keys_to_env(keys)
+        # Do NOT mirror DB-stored keys into process env.
+        # Keys from MongoDB will be used from state only (no .env fallback).
 
     def set_sens(self, v):
         if isinstance(v, (list, tuple)):
@@ -96,12 +97,12 @@ class EngineState(State):
         yield
         results = []
 
-        # Use keys from state first, then fallback to current process env.
-        groq_k = self.groq_key.strip() or os.getenv("GROQ_API_KEY", "").strip()
-        gemini_k = self.gemini_key.strip() or os.getenv("GEMINI_API_KEY", "").strip()
-        cohere_k = self.cohere_key.strip() or os.getenv("COHERE_API_KEY", "").strip()
-        anthropic_k = self.anthropic_key.strip() or os.getenv("ANTHROPIC_API_KEY", "").strip()
-        openai_k = self.openai_key.strip() or os.getenv("OPENAI_API_KEY", "").strip()
+        # Use keys ONLY from state (loaded from MongoDB). Do not use env fallbacks.
+        groq_k = self.groq_key.strip()
+        gemini_k = self.gemini_key.strip()
+        cohere_k = self.cohere_key.strip()
+        anthropic_k = self.anthropic_key.strip()
+        openai_k = self.openai_key.strip()
         # Mirror env-derived keys back to state so UI reflects actual loaded values.
         self.groq_key = groq_k
         self.gemini_key = gemini_k

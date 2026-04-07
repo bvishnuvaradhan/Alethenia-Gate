@@ -490,15 +490,25 @@ async def _run_advanced_verification(
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
-async def run_truth_engine(prompt: str) -> TruthResult:
+async def run_truth_engine(prompt: str, username: str | None = None) -> TruthResult:
     t0      = time.time()
     queries = build_queries(prompt, prompt)
+
+    # Load per-user Groq key early so pure-fact branch can use routing too
+    groq_key = None
+    if username:
+        try:
+            from .mongodb_store import load_user_api_keys
+            keys = await load_user_api_keys(username)
+            groq_key = keys.get("groq_key", "") if keys else None
+        except Exception:
+            groq_key = None
 
     # Pure math / absolute facts → skip expensive pipeline, score = 100
     if _is_pure_fact(prompt):
         ai_results, sources = await asyncio.gather(
             run_all_free_models(prompt),
-            fetch_all_sources(queries),
+            fetch_all_sources(queries, prompt=prompt, response="", groq_key=groq_key),
         )
         available    = [r for r in ai_results if r.available and r.response.strip()]
         primary_text = available[0].response if available else ""
@@ -533,9 +543,9 @@ async def run_truth_engine(prompt: str) -> TruthResult:
             facts_unverified=[],
         )
 
-    # Run all in parallel
+    # Run models and an initial web fetch in parallel (router may use prompt only)
     ai_task      = run_all_free_models(prompt)
-    sources_task = fetch_all_sources(queries)
+    sources_task = fetch_all_sources(queries, prompt=prompt, response="", groq_key=groq_key)
     ai_results, sources = await asyncio.gather(ai_task, sources_task)
 
     available     = [r for r in ai_results if r.available and r.response.strip()]
@@ -546,7 +556,7 @@ async def run_truth_engine(prompt: str) -> TruthResult:
     if primary_text:
         real_queries = build_queries(prompt, primary_text)
         if real_queries != queries:
-            sources = await fetch_all_sources(real_queries)
+            sources = await fetch_all_sources(real_queries, prompt=prompt, response=primary_text, groq_key=groq_key)
 
     # Fact check (uses Groq/OpenAI — whichever is available)
     fc = await run_fact_check(primary_text)
@@ -555,6 +565,9 @@ async def run_truth_engine(prompt: str) -> TruthResult:
     web_score, web_summary, found, not_found = calculate_web_score(
         prompt, primary_text, sources
     )
+
+    # Keep web sources and scoring as-is so web verification is always visible
+    # (Do not clear sources when no matching claims are found.)
 
     # Segment analysis
     sentences = _split_sentences(primary_text)

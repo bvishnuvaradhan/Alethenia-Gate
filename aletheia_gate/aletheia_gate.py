@@ -65,7 +65,7 @@ def interrogate_route() -> rx.Component:
     )
 
 
-@rx.page(route="/vault", title="Vault — Aletheia Gate")
+@rx.page(route="/vault", title="Vault — Aletheia Gate", on_load=VaultState.load)
 def vault_route() -> rx.Component:
     return _chrome(
         rx.cond(State.authenticated, shell(vault_page()), login_page())

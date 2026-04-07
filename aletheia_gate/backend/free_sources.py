@@ -1054,18 +1054,131 @@ async def smart_search(claim_obj: dict) -> list[Source]:
 
 # ── Main fetch ─────────────────────────────────────────────────────────────────
 
-async def fetch_all_sources(queries: list[str]) -> list[Source]:
-    """Fetch from built-in web sources and deduplicate results."""
-    # ── Stage 1: Get initial sources to refine query ──
-    primary_tasks = []
-    for q in queries[:3]:
-        primary_tasks.append(wikipedia(q))
-        primary_tasks.append(duckduckgo(q))
-        primary_tasks.append(wikidata(q))
-        primary_tasks.append(google_search(q))
-        primary_tasks.append(civic_reference(q))
+async def groq_router(groq_key: str, prompt: str, response: str, timeout: int = 6) -> dict | None:
+    """Ask Groq to classify which backends are suitable and return per-backend queries as strict JSON.
 
-    primary_results = await asyncio.gather(*primary_tasks, return_exceptions=True)
+    Expected JSON shape:
+    {
+      "wikipedia": {"send": true, "query": "..."},
+      "wikidata": {"send": false, "query": "..."},
+      ...
+    }
+    """
+    if not groq_key:
+        return None
+    try:
+        from groq import AsyncGroq
+        prompt_text = (
+            "You are a router that, given a user's prompt and the model's primary response, "
+            "must decide which web backends should be queried for verification.\n"
+            "Return ONLY valid JSON with the following keys: wikipedia, wikidata, duckduckgo, openalex, entrez, arxiv, google, civic.\n"
+            "For each key return an object {\"send\": true|false, \"query\": \"...\"}.\n"
+            "Rules: prefer Wikipedia/Wikidata for general factual lookups, DuckDuckGo for quick web snippets, OpenAlex/ArXiv for research papers, Entrez for medical/biomedical facts, Civic for official government sources, Google only as a generic search fallback.\n"
+            "Base your decisions on the prompt and response. Keep queries concise (under 120 chars).\n"
+            "Output strict JSON only.\n"
+            "Prompt: " + prompt + "\n\nResponse: " + (response or "")
+        )
+        client = AsyncGroq(api_key=groq_key)
+        resp = await client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt_text}],
+            max_tokens=800,
+            temperature=0.0,
+        )
+        text = resp.choices[0].message.content or ""
+        # Parse first JSON object from text
+        import json
+        j = None
+        try:
+            j = json.loads(text)
+        except Exception:
+            # Try to extract JSON substring
+            m = re.search(r"\{[\s\S]*\}", text)
+            if m:
+                try:
+                    j = json.loads(m.group(0))
+                except Exception:
+                    j = None
+        return j
+    except Exception:
+        return None
+
+
+async def fetch_all_sources(queries: list[str], prompt: str = "", response: str = "", groq_key: str | None = None) -> list[Source]:
+    """Fetch from built-in web sources and deduplicate results.
+
+    If `groq_key` is provided and Groq returns routing JSON, use that to decide
+    which backends to call and which query string to use per-backend. Otherwise
+    fall back to earlier behaviour and heuristics.
+    """
+    # ── Stage 1: Get initial sources to refine query ──
+    primary_results = []
+    # If a Groq router key is provided, attempt to get per-backend routing
+    route = None
+    if groq_key:
+        try:
+            route = await safe_call(groq_router(groq_key, prompt or "", response or ""), timeout=6)
+        except Exception:
+            route = None
+
+    if route and isinstance(route, dict):
+        # Map backend names to callables
+        backend_map = {
+            "wikipedia": wikipedia,
+            "wikidata": wikidata,
+            "duckduckgo": duckduckgo,
+            "google": google_search,
+            "civic": civic_reference,
+            "openalex": openalex_search,
+            "entrez": entrez_search,
+            "arxiv": arxiv_search,
+        }
+        tasks = []
+        # Use router-provided queries (or fallback to the first query)
+        for name, cfg in route.items():
+            try:
+                send = bool(cfg.get("send", False))
+                qtext = str(cfg.get("query", "")).strip() or (queries[0] if queries else "")
+            except Exception:
+                continue
+            if send and name in backend_map:
+                tasks.append(backend_map[name](qtext))
+
+        if tasks:
+            # If router recommended very few backends, also call default broad backends
+            if len(tasks) < 3:
+                q = queries[0] if queries else ""
+                # add default high-value backends to improve coverage
+                tasks.extend([
+                    wikipedia(q),
+                    wikidata(q),
+                    google_search(q),
+                    duckduckgo(q),
+                ])
+            primary_results = await asyncio.gather(*tasks, return_exceptions=True)
+        else:
+            # fallback to general search if router said not to send anywhere
+            primary_tasks = []
+            for q in queries[:3]:
+                primary_tasks.append(wikipedia(q))
+                primary_tasks.append(duckduckgo(q))
+                primary_tasks.append(wikidata(q))
+                primary_tasks.append(google_search(q))
+            primary_results = await asyncio.gather(*primary_tasks, return_exceptions=True)
+    else:
+        primary_tasks = []
+        for q in queries[:3]:
+            primary_tasks.append(wikipedia(q))
+            primary_tasks.append(duckduckgo(q))
+            primary_tasks.append(wikidata(q))
+            primary_tasks.append(google_search(q))
+            primary_tasks.append(civic_reference(q))
+            # Additional sources to improve coverage
+            primary_tasks.append(openalex_search(q))
+            primary_tasks.append(entrez_search(q))
+            primary_tasks.append(arxiv_search(q))
+
+        primary_results = await asyncio.gather(*primary_tasks, return_exceptions=True)
     sources: list[Source] = []
     seen_urls = set()
 
@@ -1087,7 +1200,50 @@ async def fetch_all_sources(queries: list[str]) -> list[Source]:
         )
         sources.append(fallback)
 
-    return sources[:6]  # Limit to 6 sources max
+    # Keyword relevance filtering: prefer sources that contain query keywords
+    try:
+        kws = _query_keywords(" ".join(queries)) if queries else set()
+        scored = []
+        query_text = " ".join(queries) if queries else ""
+        for s in sources:
+            text = " ".join([s.name or "", s.excerpt or "", s.url or ""]).lower()
+            # keyword score: fraction of kws present
+            kw_score = 0.0
+            if kws:
+                kw_score = sum(1 for k in kws if k in text) / max(1, len(kws))
+
+            # semantic score: use sentence-transformer when available (0.0-1.0)
+            sem_score = 0.0
+            try:
+                sem_score = semantic_similarity(query_text, s.excerpt or "") if _SENTENCE_MODEL else 0.0
+            except Exception:
+                sem_score = 0.0
+
+            # combined score: weight semantic higher than keyword
+            combined = 0.65 * sem_score + 0.35 * kw_score
+            scored.append((combined, s))
+
+        # Sort descending by combined score and keep top candidates
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top_sources = [s for score, s in scored if score > 0.0]
+
+        # If semantic scoring removed everything, fallback to original sources
+        if not top_sources:
+            top_sources = sources
+
+        # Ensure at least 2 sources remain: if top_sources < 2, fill from original
+        if len(top_sources) < 2:
+            for s in sources:
+                if s not in top_sources:
+                    top_sources.append(s)
+                if len(top_sources) >= 2:
+                    break
+
+        # Final cap: return up to 12 best sources
+        return top_sources[:12]
+    except Exception:
+        # On error, fallback to original conservative return
+        return sources[:12]
 
 
 # ── SMART VERIFICATION (NEW) ───────────────────────────────────────────────────
@@ -1276,6 +1432,7 @@ def calculate_web_score(
     claims    = extract_claims(response)
     found     = []
     not_found = []
+    
     for claim in claims:
         if claim_in_sources(claim, sources):
             found.append(claim[:120])

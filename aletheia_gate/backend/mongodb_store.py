@@ -229,6 +229,8 @@ def _save_query_result_sync(username: str, result_data: dict[str, Any]) -> tuple
             "web_sources": result_data.get("web_sources"),
             "web_score": result_data.get("web_score"),
             "web_summary": result_data.get("web_summary"),
+            "final_output": result_data.get("final_output"),
+            "stream_output": result_data.get("stream_output"),
             "facts_verified": result_data.get("facts_verified", []),
             "facts_unverified": result_data.get("facts_unverified", []),
             "web_source_names": result_data.get("web_source_names", []),
@@ -278,6 +280,60 @@ def _get_query_result_by_id_sync(username: str, custody_id: str) -> dict | None:
         return None
 
 
+def _backfill_query_results_sync(username: str, limit: int = 500) -> tuple[int, int]:
+    """Backfill legacy query documents with richer output fields.
+
+    Returns:
+        (checked_count, updated_count)
+    """
+    try:
+        _ensure_indexes_sync()
+        coll = _db()[_RESULTS]
+        docs = list(
+            coll.find({"username": username})
+            .sort("created_at", -1)
+            .limit(limit)
+        )
+
+        checked = 0
+        updated = 0
+
+        for doc in docs:
+            checked += 1
+            patch: dict[str, Any] = {}
+
+            models = doc.get("models", []) if isinstance(doc.get("models", []), list) else []
+            web_summary = str(doc.get("web_summary", "") or "").strip()
+            stream_output = str(doc.get("stream_output", "") or "").strip()
+            final_output = str(doc.get("final_output", "") or "").strip()
+
+            if not final_output:
+                candidate = web_summary or stream_output
+                if not candidate:
+                    for m in models:
+                        if isinstance(m, dict):
+                            response = str(m.get("response", "") or "").strip()
+                            if response:
+                                candidate = response
+                                break
+                if candidate:
+                    patch["final_output"] = candidate
+
+            if not stream_output:
+                if web_summary:
+                    patch["stream_output"] = web_summary
+                elif "final_output" in patch:
+                    patch["stream_output"] = patch["final_output"]
+
+            if patch:
+                coll.update_one({"_id": doc["_id"]}, {"$set": patch})
+                updated += 1
+
+        return checked, updated
+    except PyMongoError:
+        return 0, 0
+
+
 async def save_query_result(username: str, result_data: dict[str, Any]) -> tuple[bool, str]:
     """Async wrapper for saving query results."""
     if not username:
@@ -312,3 +368,37 @@ async def get_query_result_by_id(username: str, custody_id: str) -> dict | None:
         return await asyncio.to_thread(_get_query_result_by_id_sync, username, custody_id)
     except Exception:
         return None
+
+
+async def backfill_query_results(username: str, limit: int = 500) -> tuple[int, int]:
+    """Async wrapper to backfill old query results with richer fields."""
+    if not username:
+        return 0, 0
+    if not _PYMONGO_AVAILABLE:
+        return 0, 0
+    try:
+        return await asyncio.to_thread(_backfill_query_results_sync, username, limit)
+    except Exception:
+        return 0, 0
+
+
+def _delete_query_result_sync(username: str, custody_id: str) -> bool:
+    """Delete a specific query result by custody ID."""
+    try:
+        _ensure_indexes_sync()
+        res = _db()[_RESULTS].delete_one({"username": username, "chain_of_custody_id": custody_id})
+        return res.deleted_count > 0
+    except PyMongoError:
+        return False
+
+
+async def delete_query_result(username: str, custody_id: str) -> bool:
+    """Async wrapper to delete a specific query result."""
+    if not username or not custody_id:
+        return False
+    if not _PYMONGO_AVAILABLE:
+        return False
+    try:
+        return await asyncio.to_thread(_delete_query_result_sync, username, custody_id)
+    except Exception:
+        return False
