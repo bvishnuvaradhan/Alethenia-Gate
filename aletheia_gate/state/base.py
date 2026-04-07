@@ -139,6 +139,14 @@ class State(rx.State):
             "vault": "/vault",
             "terminate": "/terminate",
         }
+        # Refresh aggregated dashboard data in background so sidebar shows
+        # up-to-date TRUTH SCORE across all pages for the current user.
+        try:
+            # Schedule background refresh if running inside an event loop
+            asyncio.create_task(self.load_latest_result())
+        except Exception:
+            # Fallback: ignore if scheduling is not possible in this context
+            pass
         return rx.redirect(route_map.get(p, "/hub"))
     
     async def go_hub_with_load(self):

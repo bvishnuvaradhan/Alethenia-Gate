@@ -44,7 +44,7 @@ def sidebar() -> rx.Component:
             rx.el.img(src="/favicon.ico", alt="Aletheia logo", class_name="ag-logo-ring", style={"border_radius": "50%", "object_fit": "cover"}),
             rx.vstack(
                 rx.text("ALETHEIA",       class_name="ag-brand-main"),
-                rx.text("GATE // v2.4.1", class_name="ag-brand-sub"),
+                   rx.text("GATE", class_name="ag-brand-sub"),
                 align="start", spacing="0",
             ),
             align="center", spacing="3",
