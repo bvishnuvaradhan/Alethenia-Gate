@@ -78,6 +78,13 @@ class State(rx.State):
     web_source_names: list[str] = []   # e.g. ['Wikipedia: Python', 'DuckDuckGo / Wikipedia']
     web_source_urls: list[str] = []    # Corresponding URLs for each source
 
+    # API keys loaded from MongoDB for the active user
+    groq_key: str = ""
+    gemini_key: str = ""
+    cohere_key: str = ""
+    anthropic_key: str = ""
+    openai_key: str = ""
+
     # fact checking
     fact_errors: list[FactErrorItem] = []
     fact_checker_used: str = ""

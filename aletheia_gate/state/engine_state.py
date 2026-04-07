@@ -8,13 +8,6 @@ from ..backend.mongodb_store import save_user_api_keys_now, load_user_api_keys
 
 
 class EngineState(State):
-    # Free AI model keys
-    groq_key:      str = ""
-    gemini_key:    str = ""
-    cohere_key:    str = ""
-    anthropic_key: str = ""
-    openai_key:    str = ""
-
     # Settings
     sensitivity: int = 75
     max_tokens:  int = 800
