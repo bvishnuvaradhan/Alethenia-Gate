@@ -8,6 +8,7 @@ NAV = [
     ("hub",         "◈", "The Hub"),
     ("interrogate", "⟁", "Interrogation"),
     ("vault",       "⬢", "The Vault"),
+    ("analysis",    "◍", "Analysis"),
     ("engine",      "⚙", "Engine Room"),
 ]
 
@@ -51,11 +52,7 @@ def sidebar() -> rx.Component:
             class_name="ag-sbl",
         ),
         # Status
-        rx.hstack(
-            rx.box(class_name="ag-dot ag-dot-g"),
-            spacing="2", align="center",
-            class_name="ag-sbst",
-        ),
+        rx.box(class_name="ag-sbst"),
         # Nav items
         rx.box(
             *[_ni(*n) for n in NAV],

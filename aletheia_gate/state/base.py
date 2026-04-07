@@ -142,6 +142,7 @@ class State(rx.State):
         route_map = {
             "hub": "/hub",
             "engine": "/engine",
+            "analysis": "/analysis",
             "interrogate": "/interrogate",
             "vault": "/vault",
             "terminate": "/terminate",

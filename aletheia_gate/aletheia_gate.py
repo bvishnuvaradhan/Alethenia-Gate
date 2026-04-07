@@ -9,6 +9,7 @@ from .state.base import State
 from .state.interrogation_state import IntState
 from .state.vault_state import VaultState
 from .state.engine_state import EngineState
+from .state.analysis_state import AnalysisState
 from .state.terminate_state import TermState
 
 from .pages.landing       import landing_page
@@ -19,6 +20,7 @@ from .pages.dashboard     import dashboard_page
 from .pages.interrogation import interrogation_page
 from .pages.vault         import vault_page
 from .pages.engine        import engine_page
+from .pages.analysis      import analysis_page
 from .pages.terminate     import terminate_page
 
 
@@ -76,6 +78,13 @@ def vault_route() -> rx.Component:
 def engine_route() -> rx.Component:
     return _chrome(
         rx.cond(State.authenticated, shell(engine_page()), login_page())
+    )
+
+
+@rx.page(route="/analysis", title="Analysis — Aletheia Gate", on_load=AnalysisState.load_analysis)
+def analysis_route() -> rx.Component:
+    return _chrome(
+        rx.cond(State.authenticated, shell(analysis_page()), login_page())
     )
 
 
