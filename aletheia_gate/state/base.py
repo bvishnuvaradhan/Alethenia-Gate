@@ -176,6 +176,26 @@ class State(rx.State):
             if username != "anonymous":
                 results = await get_query_results("anonymous", limit=100)
             if not results:
+                # Clear stale user-specific dashboard state when this user has no data.
+                self.truth_score = 0
+                self.consensus = 0.0
+                self.semantic = 0.0
+                self.alignment = 0.0
+                self.custody_id = ""
+                self.aggregated_count = 0
+                self.latency_ms = 0
+                self.web_sources = 0
+                self.web_score = 0.0
+                self.web_summary = ""
+                self.facts_verified = []
+                self.facts_unverified = []
+                self.web_source_names = []
+                self.web_source_urls = []
+                self.fact_check_done = False
+                self.fact_penalty = 0.0
+                self.models = []
+                self.segments = []
+                self.fact_errors = []
                 return  # No results to load
         
         # ════ AGGREGATE NUMERIC METRICS ════
@@ -314,12 +334,11 @@ class State(rx.State):
 
         # Load user API keys into state so all pages can use MongoDB values directly.
         saved_keys = await load_user_api_keys(u)
-        if saved_keys:
-            self.groq_key = saved_keys.get("groq_key", "")
-            self.gemini_key = saved_keys.get("gemini_key", "")
-            self.cohere_key = saved_keys.get("cohere_key", "")
-            self.anthropic_key = saved_keys.get("anthropic_key", "")
-            self.openai_key = saved_keys.get("openai_key", "")
+        self.groq_key = saved_keys.get("groq_key", "") if saved_keys else ""
+        self.gemini_key = saved_keys.get("gemini_key", "") if saved_keys else ""
+        self.cohere_key = saved_keys.get("cohere_key", "") if saved_keys else ""
+        self.anthropic_key = saved_keys.get("anthropic_key", "") if saved_keys else ""
+        self.openai_key = saved_keys.get("openai_key", "") if saved_keys else ""
 
         self.username = u
         self.authenticated = True
@@ -358,6 +377,7 @@ class State(rx.State):
         self.su_pass = ""
         self.show_su_pass = False
         yield
+        await self.load_latest_result()
         await asyncio.sleep(0.5)
         yield rx.call_script("window.location.href = '/hub'")
 

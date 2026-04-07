@@ -50,16 +50,18 @@ class EngineState(State):
 
     async def load_saved_api_keys(self):
         if not self.authenticated or not self.username:
+            self.groq_key = ""
+            self.gemini_key = ""
+            self.cohere_key = ""
+            self.anthropic_key = ""
+            self.openai_key = ""
             return
         keys = await load_user_api_keys(self.username)
-        if not keys:
-            return
-
-        self.groq_key = keys.get("groq_key", "")
-        self.gemini_key = keys.get("gemini_key", "")
-        self.cohere_key = keys.get("cohere_key", "")
-        self.anthropic_key = keys.get("anthropic_key", "")
-        self.openai_key = keys.get("openai_key", "")
+        self.groq_key = keys.get("groq_key", "") if keys else ""
+        self.gemini_key = keys.get("gemini_key", "") if keys else ""
+        self.cohere_key = keys.get("cohere_key", "") if keys else ""
+        self.anthropic_key = keys.get("anthropic_key", "") if keys else ""
+        self.openai_key = keys.get("openai_key", "") if keys else ""
         # Do NOT mirror DB-stored keys into process env.
         # Keys from MongoDB will be used from state only (no .env fallback).
 
