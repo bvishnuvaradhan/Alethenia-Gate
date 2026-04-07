@@ -304,6 +304,15 @@ class State(rx.State):
             yield
             return
 
+        # Load user API keys into state so all pages can use MongoDB values directly.
+        saved_keys = await load_user_api_keys(u)
+        if saved_keys:
+            self.groq_key = saved_keys.get("groq_key", "")
+            self.gemini_key = saved_keys.get("gemini_key", "")
+            self.cohere_key = saved_keys.get("cohere_key", "")
+            self.anthropic_key = saved_keys.get("anthropic_key", "")
+            self.openai_key = saved_keys.get("openai_key", "")
+
         self.username = u
         self.authenticated = True
         self.page = "app"
