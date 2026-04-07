@@ -459,17 +459,6 @@ def interrogation_page() -> rx.Component:
                     spacing="2",align="center"),class_name="ag-err"),
             ),
 
-            # Navigation button to return to hub
-            rx.cond(
-                State.truth_score > 0,
-                rx.box(
-                    "◀  BACK TO HUB",
-                    class_name="ag-btn",
-                    on_click=IntState.go_to_hub_with_result,
-                    cursor="pointer",
-                ),
-            ),
-
             spacing="4", flex="1", overflow_y="auto", width="100%", min_width="0",
         ),
 

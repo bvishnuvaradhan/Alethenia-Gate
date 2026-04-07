@@ -363,7 +363,7 @@ async def run_all_free_models(prompt: str, api_keys: dict[str, str] | None = Non
 
     tasks_with_names = []
     for name, key, caller in free_defs:
-        tasks_with_names.append((name, caller(prompt)))
+        tasks_with_names.append((name, caller(prompt, api_key=key)))
 
     if not tasks_with_names:
         web_answer = await _web_answer(prompt)

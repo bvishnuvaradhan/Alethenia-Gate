@@ -206,7 +206,7 @@ class IntState(State):
         # Allow more time for multi-source verification and first-run model warmup.
         result = await safe_execute(
             run_truth_engine(p, self.username),
-            timeout_sec=120,
+            timeout_sec=300,
             operation_name="Consensus engine"
         )
 
