@@ -158,8 +158,6 @@ def engine_page() -> rx.Component:
                 _apirow("OPENAI — GPT-4o-mini (OPTIONAL PAID)",
                         "sk-...", EngineState.openai_key, EngineState.set_openai,
                         "platform.openai.com/api-keys"),
-                rx.box("◈  VERIFY ALL CONNECTIONS", class_name="ag-btn",
-                       on_click=EngineState.verify, cursor="pointer", margin_top="4px"),
                 spacing="0", width="100%",
             ), class_name="ag-pan"),
 
