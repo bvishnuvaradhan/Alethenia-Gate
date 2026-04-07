@@ -51,12 +51,14 @@ def _truth_trend_chart() -> rx.Component:
                 rx.recharts.line(type_="monotone", data_key="openai", name="OpenAI", stroke="#58a6ff", stroke_width=2, dot=False, connect_nulls=True),
                 data=AnalysisState.trend_data,
                 width="100%",
-                height=360,
+                height=420,
+                style={"width": "100%"},
             ),
             spacing="2",
             width="100%",
         ),
         class_name="ag-pan",
+        width="100%",
     )
 
 
@@ -245,7 +247,10 @@ def analysis_page() -> rx.Component:
                         spacing="3",
                         width="100%",
                     ),
-                    _truth_trend_chart(),
+                    rx.box(
+                        _truth_trend_chart(),
+                        width="100%",
+                    ),
                     rx.grid(
                         _web_sources_pie(),
                         _model_bar_chart(),
@@ -261,6 +266,7 @@ def analysis_page() -> rx.Component:
             ),
         ),
         spacing="4",
+        align="stretch",
         width="100%",
         on_mount=AnalysisState.load_analysis,
     )
