@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio, os
 import reflex as rx
 from pydantic import BaseModel
-from ..backend.mongodb_store import create_user, verify_user, load_user_api_keys, apply_keys_to_env, get_query_results
+from ..backend.mongodb_store import create_user, verify_user, load_user_api_keys, get_query_results
 
 
 class ModelStat(BaseModel):
@@ -303,10 +303,6 @@ class State(rx.State):
             self.login_pass = ""
             yield
             return
-
-        # Load user API keys into environment for backend callers.
-        saved_keys = await load_user_api_keys(u)
-        apply_keys_to_env(saved_keys)
 
         self.username = u
         self.authenticated = True

@@ -167,8 +167,8 @@ async def _web_answer(prompt: str) -> str:
 
 # ── Individual callers ────────────────────────────────────────────────────────
 
-async def call_groq(prompt: str, max_tokens: int = 1500) -> ModelResult:
-    key = os.getenv("GROQ_API_KEY", "").strip()
+async def call_groq(prompt: str, max_tokens: int = 1500, api_key: str = "") -> ModelResult:
+    key = api_key.strip()
     if not key:
         return ModelResult("Groq / Llama-3.3", available=False, error="No key")
     t0 = time.time()
@@ -190,12 +190,12 @@ async def call_groq(prompt: str, max_tokens: int = 1500) -> ModelResult:
                            latency=int((time.time()-t0)*1000), error=str(e)[:100])
 
 
-async def call_gemini(prompt: str, max_tokens: int = 1500) -> ModelResult:
+async def call_gemini(prompt: str, max_tokens: int = 1500, api_key: str = "") -> ModelResult:
     """
     Gemini cascade: tries each model in order until one works.
     gemini-2.5-pro-preview → gemini-2.5-pro → gemini-2.5-flash → gemini-2.5-flash-lite
     """
-    key = os.getenv("GEMINI_API_KEY", "").strip()
+    key = api_key.strip()
     if not key:
         return ModelResult("Google / Gemini", available=False, error="No key")
 
@@ -248,8 +248,8 @@ async def call_gemini(prompt: str, max_tokens: int = 1500) -> ModelResult:
                            latency=int((time.time()-t0)*1000), error=str(e)[:100])
 
 
-async def call_openai(prompt: str, max_tokens: int = 600) -> ModelResult:
-    key = os.getenv("OPENAI_API_KEY", "").strip()
+async def call_openai(prompt: str, max_tokens: int = 600, api_key: str = "") -> ModelResult:
+    key = api_key.strip()
     if not key:
         return ModelResult("OpenAI / GPT-4o-mini", available=False, error="No key")
     t0 = time.time()
@@ -271,8 +271,8 @@ async def call_openai(prompt: str, max_tokens: int = 600) -> ModelResult:
                            latency=int((time.time()-t0)*1000), error=str(e)[:100])
 
 
-async def call_cohere(prompt: str, max_tokens: int = 600) -> ModelResult:
-    key = os.getenv("COHERE_API_KEY", "").strip()
+async def call_cohere(prompt: str, max_tokens: int = 600, api_key: str = "") -> ModelResult:
+    key = api_key.strip()
     if not key:
         return ModelResult("Cohere / Command-R", available=False, error="No key")
     t0 = time.time()
@@ -301,8 +301,8 @@ async def call_huggingface(prompt: str, max_tokens: int = 400) -> ModelResult:
                       error="No free tier available (use Groq/Cohere)")
 
 
-async def call_anthropic(prompt: str, max_tokens: int = 600) -> ModelResult:
-    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+async def call_anthropic(prompt: str, max_tokens: int = 600, api_key: str = "") -> ModelResult:
+    key = api_key.strip()
     if not key:
         return ModelResult("Anthropic / Claude-Haiku", available=False, error="No key")
     t0 = time.time()
@@ -326,12 +326,13 @@ async def call_anthropic(prompt: str, max_tokens: int = 600) -> ModelResult:
 
 # ── Main runner ───────────────────────────────────────────────────────────────
 
-async def run_all_free_models(prompt: str) -> list[ModelResult]:
-    groq_key    = os.getenv("GROQ_API_KEY",      "").strip()
-    gemini_key  = os.getenv("GEMINI_API_KEY",    "").strip()
-    cohere_key  = os.getenv("COHERE_API_KEY",    "").strip()
-    claude_key  = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    openai_key  = os.getenv("OPENAI_API_KEY",    "").strip()
+async def run_all_free_models(prompt: str, api_keys: dict[str, str] | None = None) -> list[ModelResult]:
+    api_keys = api_keys or {}
+    groq_key    = str(api_keys.get("groq_key", "") or "").strip()
+    gemini_key  = str(api_keys.get("gemini_key", "") or "").strip()
+    cohere_key  = str(api_keys.get("cohere_key", "") or "").strip()
+    claude_key  = str(api_keys.get("anthropic_key", "") or "").strip()
+    openai_key  = str(api_keys.get("openai_key", "") or "").strip()
 
     any_key = any([groq_key, gemini_key, cohere_key, claude_key, openai_key])
 

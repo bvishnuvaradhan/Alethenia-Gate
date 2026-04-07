@@ -1,10 +1,10 @@
 """Engine Room state — all free API keys."""
-import asyncio, os
+import asyncio
 import json
 import urllib.request
 import reflex as rx
 from .base import State
-from ..backend.mongodb_store import save_user_api_keys_now, load_user_api_keys, apply_keys_to_env
+from ..backend.mongodb_store import save_user_api_keys_now, load_user_api_keys
 
 
 class EngineState(State):
@@ -27,12 +27,6 @@ class EngineState(State):
     # Gemini active model (set after cascade succeeds)
     gemini_active_model: str = ""
 
-    def _env(self, key: str, val: str):
-        if val.strip():
-            os.environ[key] = val.strip()
-        else:
-            os.environ.pop(key, None)
-
     def _api_payload(self) -> dict[str, str]:
         return {
             "groq_key": self.groq_key,
@@ -47,19 +41,19 @@ class EngineState(State):
             save_user_api_keys_now(self.username, self._api_payload())
 
     def set_groq(self, v: str):
-        self.groq_key = v; self._env("GROQ_API_KEY", v); self._persist_api_keys()
+        self.groq_key = v; self._persist_api_keys()
 
     def set_gemini(self, v: str):
-        self.gemini_key = v; self._env("GEMINI_API_KEY", v); self._persist_api_keys()
+        self.gemini_key = v; self._persist_api_keys()
 
     def set_cohere(self, v: str):
-        self.cohere_key = v; self._env("COHERE_API_KEY", v); self._persist_api_keys()
+        self.cohere_key = v; self._persist_api_keys()
 
     def set_anthropic(self, v: str):
-        self.anthropic_key = v; self._env("ANTHROPIC_API_KEY", v); self._persist_api_keys()
+        self.anthropic_key = v; self._persist_api_keys()
 
     def set_openai(self, v: str):
-        self.openai_key = v; self._env("OPENAI_API_KEY", v); self._persist_api_keys()
+        self.openai_key = v; self._persist_api_keys()
 
     async def load_saved_api_keys(self):
         if not self.authenticated or not self.username:
@@ -120,7 +114,7 @@ class EngineState(State):
 
         # Groq
         if groq_k:
-            gq = await call_groq("OK", max_tokens=8)
+            gq = await call_groq("OK", max_tokens=8, api_key=groq_k)
             results.append("Groq ✓" if gq.available else f"Groq ✗ ({(gq.error or 'unavailable')[:42]})")
         else:
             results.append("Groq — no key")
@@ -133,21 +127,21 @@ class EngineState(State):
 
         # Cohere
         if cohere_k:
-            ch = await call_cohere("OK", max_tokens=8)
+            ch = await call_cohere("OK", max_tokens=8, api_key=cohere_k)
             results.append("Cohere ✓" if ch.available else f"Cohere ✗ ({(ch.error or 'unavailable')[:42]})")
         else:
             results.append("Cohere — no key")
 
         # Anthropic
         if anthropic_k:
-            an = await call_anthropic("OK", max_tokens=8)
+            an = await call_anthropic("OK", max_tokens=8, api_key=anthropic_k)
             results.append("Anthropic ✓" if an.available else f"Anthropic ✗ ({(an.error or 'unavailable')[:42]})")
         else:
             results.append("Anthropic — no key")
 
         # OpenAI (optional)
         if openai_k:
-            oa = await call_openai("OK", max_tokens=8)
+            oa = await call_openai("OK", max_tokens=8, api_key=openai_k)
             results.append("OpenAI ✓" if oa.available else f"OpenAI ✗ ({(oa.error or 'unavailable')[:42]})")
         else:
             results.append("OpenAI — no key")

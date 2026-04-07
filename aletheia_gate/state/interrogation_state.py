@@ -44,8 +44,6 @@ class IntState(State):
         self.stream = ""
         self.segments = []
         self.models = []
-        self.truth_score = 0
-        self.aggregated_count = 0
         self.web_sources = 0
         self.web_score = 0.0
         self.web_summary = ""

@@ -53,11 +53,6 @@ def sidebar() -> rx.Component:
         # Status
         rx.hstack(
             rx.box(class_name="ag-dot ag-dot-g"),
-            rx.text(
-                "CORE: OPTIMAL",
-                font_family="'Orbitron',monospace",
-                font_size="8px", color="#00e5a0", letter_spacing="0.12em",
-            ),
             spacing="2", align="center",
             class_name="ag-sbst",
         ),

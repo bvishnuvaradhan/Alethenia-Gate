@@ -19,7 +19,6 @@ def _nav() -> rx.Component:
                 class_name="ag-nav-links",
             ),
             rx.hstack(
-                rx.hstack(rx.box(class_name="ag-dot ag-dot-g"), rx.text("SYSTEM ONLINE", class_name="ag-online-chip"), class_name="ag-online-chip"),
                 rx.button("LOGIN",      class_name="ag-nav-btn-ghost", on_click=State.go_login),
                 rx.button("GET ACCESS", class_name="ag-btn ag-btn-sm", on_click=State.go_signup),
                 spacing="3", align="center", flex_shrink="0",
@@ -59,7 +58,6 @@ def _hero() -> rx.Component:
         rx.box(class_name="ag-orb ag-orb-1"), rx.box(class_name="ag-orb ag-orb-2"), rx.box(class_name="ag-orb ag-orb-3"),
         rx.hstack(
             rx.vstack(
-                rx.hstack(rx.box(class_name="ag-dot ag-dot-g"), rx.text("QUANTUM TRUTH INTERFACE // ONLINE", class_name="ag-sbadge"), align="center", spacing="0", class_name="ag-sbadge"),
                 rx.hstack(rx.box(class_name="ag-eline"), rx.text("FORENSIC-GRADE AI AUDITING", class_name="ag-ebrow"), align="center", spacing="3"),
                 rx.vstack(rx.text("ALETHEIA", class_name="ag-t1"), rx.text("GATE", class_name="ag-t2"), align="start", spacing="0"),
                 rx.vstack(rx.text("VERITAS SINE FINE", class_name="ag-tg1"), rx.text("TRUTH WITHOUT END", class_name="ag-tg2"), align="start", spacing="1", class_name="ag-tgwrap"),
