@@ -81,8 +81,8 @@ def _parse_factcheck(text: str) -> list[dict]:
 
 # ── Call models for fact-checking ────────────────────────────────────────────
 
-async def _factcheck_groq(prompt: str) -> str:
-    key = os.getenv("GROQ_API_KEY", "").strip()
+async def _factcheck_groq(prompt: str, api_key: str = "") -> str:
+    key = api_key.strip()
     if not key:
         return ""
     try:
@@ -99,8 +99,8 @@ async def _factcheck_groq(prompt: str) -> str:
         return ""
 
 
-async def _factcheck_openai(prompt: str) -> str:
-    key = os.getenv("OPENAI_API_KEY", "").strip()
+async def _factcheck_openai(prompt: str, api_key: str = "") -> str:
+    key = api_key.strip()
     if not key:
         return ""
     try:
@@ -117,8 +117,8 @@ async def _factcheck_openai(prompt: str) -> str:
         return ""
 
 
-async def _factcheck_anthropic(prompt: str) -> str:
-    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+async def _factcheck_anthropic(prompt: str, api_key: str = "") -> str:
+    key = api_key.strip()
     if not key:
         return ""
     try:

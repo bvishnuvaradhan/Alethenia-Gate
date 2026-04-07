@@ -86,8 +86,8 @@ Passage to check:
 {text}"""
 
 
-async def _check_groq(text: str) -> tuple[str, str]:
-    key = os.getenv("GROQ_API_KEY", "").strip()
+async def _check_groq(text: str, api_key: str = "") -> tuple[str, str]:
+    key = api_key.strip()
     if not key:
         return "", ""
     try:
@@ -102,8 +102,8 @@ async def _check_groq(text: str) -> tuple[str, str]:
         return "", ""
 
 
-async def _check_openai(text: str) -> tuple[str, str]:
-    key = os.getenv("OPENAI_API_KEY", "").strip()
+async def _check_openai(text: str, api_key: str = "") -> tuple[str, str]:
+    key = api_key.strip()
     if not key:
         return "", ""
     try:
@@ -163,13 +163,14 @@ def _penalty(errors: list[FactError]) -> float:
     return min(0.45, p)
 
 
-async def run_fact_check(primary_response: str) -> FactCheckResult:
+async def run_fact_check(primary_response: str, api_keys: dict[str, str] | None = None) -> FactCheckResult:
     if not primary_response or len(primary_response) < 50:
         return FactCheckResult()
 
+    api_keys = api_keys or {}
     # Only use Groq (OpenAI not configured)
     groq_r, _ = await asyncio.gather(
-        _check_groq(primary_response),
+        _check_groq(primary_response, str(api_keys.get("groq_key", "") or "")),
         asyncio.sleep(0),  # Skip OpenAI wait
     )
 

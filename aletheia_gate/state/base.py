@@ -381,5 +381,5 @@ class State(rx.State):
 
     @rx.var
     def openai_active(self) -> bool:
-        """True only if OpenAI key is actually set in environment."""
-        return bool(os.getenv("OPENAI_API_KEY", "").strip())
+        """True only if an OpenAI key is stored for the current user."""
+        return bool(getattr(self, "openai_key", "").strip())

@@ -152,11 +152,12 @@ def _is_segment_relevant(segment_text: str, prompt: str) -> bool:
 
 # ── Streaming ─────────────────────────────────────────────────────────────────
 
-async def stream_primary_response(prompt: str) -> AsyncIterator[str]:
+async def stream_primary_response(prompt: str, api_keys: dict[str, str] | None = None) -> AsyncIterator[str]:
     """Stream from best available model: Groq → Cohere → OpenAI → Web."""
-    groq_key   = os.getenv("GROQ_API_KEY",   "").strip()
-    cohere_key = os.getenv("COHERE_API_KEY", "").strip()
-    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    api_keys = api_keys or {}
+    groq_key   = str(api_keys.get("groq_key", "") or "").strip()
+    cohere_key = str(api_keys.get("cohere_key", "") or "").strip()
+    openai_key = str(api_keys.get("openai_key", "") or "").strip()
 
     # Patterns indicating LLM doesn't have fresh/current data
     unknown_patterns = [
@@ -494,21 +495,22 @@ async def run_truth_engine(prompt: str, username: str | None = None) -> TruthRes
     t0      = time.time()
     queries = build_queries(prompt, prompt)
 
-    # Load per-user Groq key early so pure-fact branch can use routing too
-    groq_key = None
+    # Load per-user API keys early so the entire pipeline uses MongoDB values only.
+    api_keys: dict[str, str] = {}
     if username:
         try:
             from .mongodb_store import load_user_api_keys
             keys = await load_user_api_keys(username)
-            groq_key = keys.get("groq_key", "") if keys else None
+            if keys:
+                api_keys = {k: str(v or "") for k, v in keys.items()}
         except Exception:
-            groq_key = None
+            api_keys = {}
 
     # Pure math / absolute facts → skip expensive pipeline, score = 100
     if _is_pure_fact(prompt):
         ai_results, sources = await asyncio.gather(
-            run_all_free_models(prompt),
-            fetch_all_sources(queries, prompt=prompt, response="", groq_key=groq_key),
+            run_all_free_models(prompt, api_keys=api_keys),
+            fetch_all_sources(queries, prompt=prompt, response="", groq_key=api_keys.get("groq_key", "")),
         )
         available    = [r for r in ai_results if r.available and r.response.strip()]
         primary_text = available[0].response if available else ""
@@ -544,8 +546,8 @@ async def run_truth_engine(prompt: str, username: str | None = None) -> TruthRes
         )
 
     # Run models and an initial web fetch in parallel (router may use prompt only)
-    ai_task      = run_all_free_models(prompt)
-    sources_task = fetch_all_sources(queries, prompt=prompt, response="", groq_key=groq_key)
+    ai_task      = run_all_free_models(prompt, api_keys=api_keys)
+    sources_task = fetch_all_sources(queries, prompt=prompt, response="", groq_key=api_keys.get("groq_key", ""))
     ai_results, sources = await asyncio.gather(ai_task, sources_task)
 
     available     = [r for r in ai_results if r.available and r.response.strip()]
@@ -556,10 +558,10 @@ async def run_truth_engine(prompt: str, username: str | None = None) -> TruthRes
     if primary_text:
         real_queries = build_queries(prompt, primary_text)
         if real_queries != queries:
-            sources = await fetch_all_sources(real_queries, prompt=prompt, response=primary_text, groq_key=groq_key)
+                sources = await fetch_all_sources(real_queries, prompt=prompt, response=primary_text, groq_key=api_keys.get("groq_key", ""))
 
     # Fact check (uses Groq/OpenAI — whichever is available)
-    fc = await run_fact_check(primary_text)
+        fc = await run_fact_check(primary_text, api_keys=api_keys)
 
     # Web scoring
     web_score, web_summary, found, not_found = calculate_web_score(

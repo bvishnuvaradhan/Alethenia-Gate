@@ -175,7 +175,14 @@ class IntState(State):
         try:
             self.status_msg = "Routing to primary model..."
             yield
-            async for tok in stream_primary_response(p):
+            api_keys = {
+                "groq_key": getattr(self, "groq_key", "") or "",
+                "gemini_key": getattr(self, "gemini_key", "") or "",
+                "cohere_key": getattr(self, "cohere_key", "") or "",
+                "anthropic_key": getattr(self, "anthropic_key", "") or "",
+                "openai_key": getattr(self, "openai_key", "") or "",
+            }
+            async for tok in stream_primary_response(p, api_keys=api_keys):
                 full += tok
                 self.stream = full
                 yield
@@ -217,7 +224,7 @@ class IntState(State):
         yield
 
         fc_result = await safe_execute(
-            run_fact_check(filtered),
+            run_fact_check(filtered, api_keys=api_keys),
             timeout_sec=12,
             operation_name="Fact checker"
         )
