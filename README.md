@@ -21,6 +21,33 @@ This project exists to provide an operator-facing verification layer that helps 
 - What external evidence supports or contradicts it?
 - Can we keep an audit trail for future review?
 
+## How This Helps in Practice
+
+ALETHEIA GATE helps reduce silent failure in AI-assisted workflows.
+Instead of accepting one model output at face value, teams get structured verification signals before acting on information.
+
+Practical benefits:
+
+- Improves trust calibration: operators can distinguish high-confidence outputs from risky ones
+- Reduces hallucination risk: claim segments are checked against multi-model and web evidence
+- Supports accountability: every interrogation can be stored and revisited in Vault
+- Speeds review workflows: highlights uncertainty and flagged segments instead of forcing full manual re-reading
+- Enables safer adoption: teams can integrate AI into research and analysis with clearer guardrails
+
+## Who This Is For
+
+- AI product teams that need reliability checks before showing outputs to users
+- Research and analyst workflows that require evidence-backed summaries
+- Internal knowledge teams that want an auditable AI verification layer
+- Developers building human-in-the-loop AI systems
+
+## Example Use Cases
+
+- Validate factual claims in generated reports
+- Compare competing model responses and identify contradiction hotspots
+- Build confidence scores for operator approval flows
+- Maintain an internal verification history for post-incident review
+
 ## Core Capabilities
 
 - Multi-model consensus pipeline for stronger verification signals
@@ -30,6 +57,13 @@ This project exists to provide an operator-facing verification layer that helps 
 - User authentication and per-user persistence in MongoDB
 - Per-user API key management in Engine Room
 - Vault history for previous interrogations and outcomes
+
+## What Makes It Different
+
+- Verification-first design: scoring and evidence are first-class outputs, not afterthoughts
+- Segment-level transparency: each part of a response can be marked verified, uncertain, or flagged
+- Operator-centric interface: dashboard and vault are built for decision support, not just model demoing
+- Pure Python Reflex stack: full-stack development without separate frontend framework complexity
 
 ## How It Works (High Level)
 
@@ -59,64 +93,6 @@ rxconfig.py
 - Reflex (frontend + backend)
 - MongoDB (users, API keys, query results)
 - Optional AI providers: Groq, OpenAI, Gemini, Anthropic, Cohere
-
-## Local Development
-
-```bash
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-
-pip install -r requirements.txt
-reflex run
-```
-
-App runs on http://localhost:3000
-
-## Environment Variables
-
-Required in deployment:
-
-- MONGODB_URI
-
-Optional (provider-level fallback keys):
-
-- OPENAI_API_KEY
-- GROQ_API_KEY
-- GEMINI_API_KEY
-- ANTHROPIC_API_KEY
-- COHERE_API_KEY
-- AG_HF_LOCAL_ONLY (default 1)
-
-Note: In this app flow, provider keys are primarily managed per user and loaded from MongoDB.
-
-## Deployment
-
-Current production deploy target:
-
-- Reflex Cloud
-
-Deployment command:
-
-```bash
-reflex deploy --app-id 0b1b547a-4740-4b6f-8e55-a721cae9f3be
-```
-
-Secrets are managed with:
-
-```bash
-reflex cloud secrets update 0b1b547a-4740-4b6f-8e55-a721cae9f3be --envfile .env --reboot
-```
-
-## CI/CD
-
-GitHub Actions auto-deploy is configured on push to main via:
-
-- .github/workflows/reflex-deploy.yml
-
-Required GitHub secret:
-
-- REFLEX_TOKEN
 
 ## Disclaimer
 
