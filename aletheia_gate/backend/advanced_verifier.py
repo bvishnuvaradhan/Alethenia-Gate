@@ -4,6 +4,7 @@ Uses sentence-transformers and spaCy for intelligent claim verification.
 """
 from __future__ import annotations
 import asyncio
+import os
 import re
 from dataclasses import dataclass
 from typing import Optional
@@ -17,8 +18,18 @@ def _load_models():
     global _MODEL, _NLP
     if _MODEL is None:
         try:
+            os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+            os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+            try:
+                from transformers.utils import logging as hf_logging
+                hf_logging.set_verbosity_error()
+                hf_logging.disable_progress_bar()
+            except Exception:
+                pass
             from sentence_transformers import SentenceTransformer
-            _MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+            # Default to local-only to avoid startup/network failures in offline environments.
+            local_only = os.getenv("AG_HF_LOCAL_ONLY", "1") != "0"
+            _MODEL = SentenceTransformer('all-MiniLM-L6-v2', local_files_only=local_only)
         except Exception as e:
             print(f"[!] Sentence transformers unavailable: {e}")
             _MODEL = None
@@ -317,5 +328,4 @@ async def verify_claims_advanced(
     return results
 
 
-# ─── Initialize on import ─────────────────────────────────────────────────
-_load_models()
+# Models are loaded lazily by verify_claims_advanced().

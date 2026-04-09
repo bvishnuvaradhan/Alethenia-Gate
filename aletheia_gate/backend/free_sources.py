@@ -17,18 +17,59 @@ from __future__ import annotations
 import asyncio, importlib, json, os, re, urllib.parse, urllib.request
 from dataclasses import dataclass, field
 
-# ── LOAD GLOBAL MODELS ONCE (prevent lag) ────────────────────────────────────
-try:
-    from sentence_transformers import SentenceTransformer, util
-    _SENTENCE_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
-except Exception:
-    _SENTENCE_MODEL = None
+# ── MODEL HANDLES (lazy-loaded to avoid startup noise/latency) ───────────────
+_SENTENCE_MODEL = None
+_NLP = None
+_ST_UTIL = None
+_MODELS_INIT_ATTEMPTED = False
+_NLP_INIT_ATTEMPTED = False
 
-try:
-    import spacy
-    _NLP = spacy.load("en_core_web_sm")
-except Exception:
-    _NLP = None
+
+def _get_sentence_model():
+    """Load sentence-transformers model on first use, with quiet logging."""
+    global _SENTENCE_MODEL, _ST_UTIL, _MODELS_INIT_ATTEMPTED
+    if _SENTENCE_MODEL is not None or _MODELS_INIT_ATTEMPTED:
+        return _SENTENCE_MODEL
+
+    _MODELS_INIT_ATTEMPTED = True
+    try:
+        os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+        from transformers.utils import logging as hf_logging
+        hf_logging.set_verbosity_error()
+        hf_logging.disable_progress_bar()
+    except Exception:
+        pass
+
+    try:
+        from sentence_transformers import SentenceTransformer, util as st_util
+        local_only = os.getenv("AG_HF_LOCAL_ONLY", "1") != "0"
+        _SENTENCE_MODEL = SentenceTransformer(
+            'all-MiniLM-L6-v2',
+            local_files_only=local_only,
+        )
+        _ST_UTIL = st_util
+    except Exception:
+        _SENTENCE_MODEL = None
+        _ST_UTIL = None
+
+    return _SENTENCE_MODEL
+
+
+def _get_nlp():
+    """Load spaCy model on first use."""
+    global _NLP, _NLP_INIT_ATTEMPTED
+    if _NLP is not None or _NLP_INIT_ATTEMPTED:
+        return _NLP
+
+    _NLP_INIT_ATTEMPTED = True
+    try:
+        import spacy
+        _NLP = spacy.load("en_core_web_sm")
+    except Exception:
+        _NLP = None
+
+    return _NLP
 
 # ── ACTIVE TASK TRACKING ───────────────────────────────────────────────────────
 _active_tasks = set()
@@ -106,12 +147,13 @@ def cluster_claims(claims: list[str], threshold: float = 0.85) -> list[list[str]
     if len(claims) == 1:
         return [[claims[0]]]
 
-    if not _SENTENCE_MODEL:
+    model = _get_sentence_model()
+    if not model or _ST_UTIL is None:
         return [[c] for c in claims]
 
     try:
         # 🔥 Encode ALL claims at once
-        embeddings = _SENTENCE_MODEL.encode(claims, convert_to_tensor=True)
+        embeddings = model.encode(claims, convert_to_tensor=True)
 
         clusters = []
         used = set()
@@ -128,7 +170,7 @@ def cluster_claims(claims: list[str], threshold: float = 0.85) -> list[list[str]
                     continue
 
                 # Cosine similarity between claim i and j
-                sim = util.cos_sim(embeddings[i], embeddings[j]).item()
+                sim = _ST_UTIL.cos_sim(embeddings[i], embeddings[j]).item()
 
                 if sim > threshold:
                     group.append(claims[j])
@@ -278,10 +320,11 @@ def extract_claims(text: str) -> list[str]:
 
 def extract_entities(text: str) -> list[tuple[str, str]]:
     """Extract named entities using spaCy NER."""
-    if not _NLP:
+    nlp = _get_nlp()
+    if not nlp:
         return []
     try:
-        doc = _NLP(text)
+        doc = nlp(text)
         return [(ent.text, ent.label_) for ent in doc.ents]
     except Exception:
         return []
@@ -289,10 +332,11 @@ def extract_entities(text: str) -> list[tuple[str, str]]:
 
 def extract_triplet(text: str) -> tuple[str, str, str]:
     """Extract subject-predicate-object using dependency parsing."""
-    if not _NLP:
+    nlp = _get_nlp()
+    if not nlp:
         return None, None, None
     try:
-        doc = _NLP(text)
+        doc = nlp(text)
         subject = relation = obj = None
 
         for token in doc:
@@ -353,12 +397,13 @@ def clean_text(text: str) -> str:
 
 def semantic_similarity(text_a: str, text_b: str) -> float:
     """Compute semantic similarity using sentence transformers."""
-    if not _SENTENCE_MODEL:
+    model = _get_sentence_model()
+    if not model or _ST_UTIL is None:
         return 0.0
     try:
-        emb_a = _SENTENCE_MODEL.encode(clean_text(text_a), convert_to_tensor=True)
-        emb_b = _SENTENCE_MODEL.encode(clean_text(text_b), convert_to_tensor=True)
-        sim = util.cos_sim(emb_a, emb_b).item()
+        emb_a = model.encode(clean_text(text_a), convert_to_tensor=True)
+        emb_b = model.encode(clean_text(text_b), convert_to_tensor=True)
+        sim = _ST_UTIL.cos_sim(emb_a, emb_b).item()
         return float(max(0, min(1, sim)))
     except Exception:
         return 0.0
@@ -1215,7 +1260,7 @@ async def fetch_all_sources(queries: list[str], prompt: str = "", response: str 
             # semantic score: use sentence-transformer when available (0.0-1.0)
             sem_score = 0.0
             try:
-                sem_score = semantic_similarity(query_text, s.excerpt or "") if _SENTENCE_MODEL else 0.0
+                sem_score = semantic_similarity(query_text, s.excerpt or "")
             except Exception:
                 sem_score = 0.0
 
